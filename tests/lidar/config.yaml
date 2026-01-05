@@ -1,0 +1,31 @@
+# LIDAR Test Configuration
+# Tune these parameters and re-run scripts to see changes
+
+lidar:
+  port: 2368
+
+# Point cloud filtering
+pointcloud:
+  z_min: -0.5      # Min height (m) - filter ground
+  z_max: 2.0       # Max height (m) - filter ceiling
+  range_max: 20.0  # Max range (m)
+
+# Occupancy Grid parameters
+occupancy_grid:
+  width: 20.0         # Grid width (m)
+  height: 20.0        # Grid height (m)
+  resolution: 0.2     # Cell size (m) - smaller = more detail, slower
+  log_odds_occ: 0.4   # Occupancy update strength (0.1-1.0)
+  log_odds_free: 0.1  # Free space update strength (0.1-1.0)
+  decay_factor: 0.5   # Temporal decay (0-1, higher = faster fade)
+  use_raycasting: false
+
+# Costmap parameters
+costmap:
+  robot_radius: 0.5   # Robot collision radius (m)
+  safety_margin: 0.3  # Extra clearance (m)
+
+# Visualization
+visualization:
+  update_hz: 10       # Refresh rate
+  colormap: "RdYlGn_r"  # matplotlib colormap

@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Data/logs
+*.csv
+*.log
+*.mtb
+*.bin
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SSL certs (generated locally)
+*.pem
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Archive folder
+archive/
+
+# Claude local settings
+.claude/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# LaTeX build files
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.synctex.gz
+
+# Captured data
+gokart_data/
+**/gokart_data/
+*.jpg
+*.png
+*.jpeg
+
+# Docs PDF (build artifact)
+docs/*.pdf
+
+# Model weights (too large for GitHub)
+*.pt

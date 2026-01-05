@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "utm-navigator"
+version = "1.0.0"
+description = "Autonomous Vehicle Research Platform"
+requires-python = ">=3.8"
+
+[tool.setuptools.packages.find]
+include = ["sensors*", "perception*", "planning*", "control*", "actuators*", "utils*"]

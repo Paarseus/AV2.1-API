@@ -1,0 +1,136 @@
+# UTM Navigator - Default Vehicle Configuration
+# Copy to config/local.yaml to customize for your vehicle
+#
+# Usage:
+#   from utils.config import load_config
+#   config = load_config()  # Loads local.yaml with default.yaml fallback
+#   wheelbase = config['vehicle']['wheelbase']
+
+# System Settings
+system:
+  control_rate_hz: 20.0      # Main control loop frequency
+  enable_visualization: true  # Enable matplotlib/Open3D visualization
+  log_level: "INFO"          # Logging level: DEBUG, INFO, WARNING, ERROR
+
+# Navigation
+navigation:
+  # Default destination (Cal Poly Pomona area)
+  destination_lat: 34.059289
+  destination_lon: -117.822093
+  # Route planning
+  network_type: "drive"       # OSMnx network type: drive, walk, bike
+  waypoint_spacing: 2.0       # Distance between waypoints (meters)
+  # Timeouts
+  rtk_timeout: 60.0           # Max wait for RTK fix (seconds)
+  gps_fix_timeout: 20.0       # Max wait for any GPS fix (seconds)
+
+# Vehicle Geometry
+vehicle:
+  wheelbase: 1.23          # Distance between axles (meters)
+  max_steering_deg: 28.0   # Maximum steering angle (degrees)
+  robot_radius: 0.5        # Collision radius for planning (meters)
+  safety_margin: 0.5       # Extra clearance beyond robot_radius (meters)
+
+# Control Parameters
+control:
+  # Pure Pursuit
+  pure_pursuit:
+    K_dd: 0.4              # Lookahead gain (lookahead = K_dd * speed)
+    min_lookahead: 3.0     # Minimum lookahead distance (meters)
+    max_lookahead: 20.0    # Maximum lookahead distance (meters)
+    waypoint_shift: 0.0    # Shift waypoints along x-axis (meters)
+
+  # PID (for speed control)
+  pid:
+    kp: 0.3
+    ki: 0.01
+    kd: 0.05
+    output_min: 0.0
+    output_max: 1.0
+
+# Planning Parameters
+planning:
+  # Goal tolerance
+  goal_tolerance: 2.0      # Distance to consider goal reached (meters)
+  min_control_speed: 0.1   # Minimum speed for control (m/s)
+
+  # DWA Parameters
+  dwa:
+    max_speed: 1.0         # Maximum forward speed (m/s)
+    min_speed: 0.0         # Minimum speed (m/s)
+    max_accel: 0.5         # Maximum acceleration (m/s^2)
+    max_yaw_rate: 1.0      # Maximum angular velocity (rad/s)
+    max_delta_yaw_rate: 2.0  # Maximum angular acceleration (rad/s^2)
+    v_resolution: 0.05     # Velocity sampling resolution (m/s)
+    yaw_rate_resolution: 0.05  # Angular velocity resolution (rad/s)
+    dt: 0.1                # Time step (s)
+    predict_time: 2.0      # Trajectory prediction horizon (s)
+    to_goal_cost_gain: 0.15
+    speed_cost_gain: 1.0
+    obstacle_cost_gain: 1.0
+
+  # Ackermann DWA Parameters
+  ackermann_dwa:
+    max_speed: 1.0
+    min_speed: 0.0
+    max_accel: 0.5
+    max_steering: 0.6      # ~35 degrees
+    max_steering_rate: 1.0  # ~60 deg/s
+    v_resolution: 0.02
+    steering_resolution: 0.035  # ~2 degrees
+    dt: 0.1
+    predict_time: 3.0
+    to_goal_cost_gain: 0.01
+    speed_cost_gain: 1.0
+    obstacle_cost_gain: 2.0
+    goal_dist_cost_gain: 0.3
+
+# Perception Parameters
+perception:
+  # Occupancy Grid
+  occupancy_grid:
+    width: 40.0            # Grid width (meters)
+    height: 40.0           # Grid height (meters)
+    resolution: 0.1        # Cell size (meters)
+    log_odds_occ: 0.4      # Log-odds increment for occupied
+    log_odds_free: -0.2    # Log-odds increment for free
+    decay_factor: 0.95     # Temporal decay per second
+    use_raycasting: true   # Enable Bresenham raycasting
+
+  # Costmap
+  costmap:
+    obstacle_threshold: 0.55  # Probability threshold for obstacles
+
+# Actuator Configuration
+actuators:
+  # Serial (USB) connection
+  serial:
+    port: "/dev/ttyACM0"
+    baud: 115200
+    timeout: 0.1
+
+  # UDP (Ethernet) connection
+  udp:
+    teensy_ip: "192.168.13.177"
+    teensy_port: 5005
+    keepalive_interval: 0.2  # Seconds between keepalive packets
+
+  # Safety
+  max_throttle: 0.4        # Maximum throttle limit (0-1)
+  watchdog_timeout: 0.5    # Teensy E-stop timeout (seconds)
+
+# Sensor Configuration
+sensors:
+  # Xsens GPS/IMU
+  xsens:
+    update_rate: 100       # Hz
+
+  # LIDAR
+  lidar:
+    host: "0.0.0.0"
+    port: 2368
+    timeout: 1.0
+    # Height filtering for ground plane removal
+    z_min: -0.5              # Min height to keep (meters, relative to sensor)
+    z_max: 2.0               # Max height to keep (meters)
+    range_max: 50.0          # Maximum range (meters)

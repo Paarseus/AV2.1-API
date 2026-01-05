@@ -1,0 +1,6 @@
+$ ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -preset ultrafast -f mpegts tcp://100.91.25.107:5005
+$ ffplay -fflags nobuffer tcp://0.0.0.0:5000?listen=1
+
+
+
+
