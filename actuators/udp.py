@@ -72,7 +72,7 @@ class VehicleActuatorUDP:
         self._socket: Optional[socket.socket] = None
         self._lock = threading.Lock()
         self._state = ActuatorState()
-        self._last_send_time = 0.0
+        self._last_send_time = time.time()  # Initialize to current time to prevent immediate keepalive
 
         # Keepalive thread
         self._keepalive_thread: Optional[threading.Thread] = None
@@ -165,7 +165,10 @@ class VehicleActuatorUDP:
         """Background thread to prevent watchdog timeout."""
         while not self._keepalive_stop.is_set():
             time.sleep(self.keepalive_interval)
-            if time.time() - self._last_send_time >= self.keepalive_interval:
+            # Thread-safe read of _last_send_time
+            with self._lock:
+                last_send = self._last_send_time
+            if time.time() - last_send >= self.keepalive_interval:
                 self._send_all()
 
     def _send_all(self):
@@ -211,6 +214,8 @@ class VehicleActuatorUDP:
 
     def set_steer_deg(self, degrees: float, mech_limit_deg: float = 28.0):
         """Set steering in degrees. Converts to normalized using mechanical limit."""
+        if mech_limit_deg <= 0.0:
+            raise ValueError(f"mech_limit_deg must be positive, got {mech_limit_deg}")
         d = max(-mech_limit_deg, min(mech_limit_deg, float(degrees)))
         self.set_steer_norm(d / mech_limit_deg)
 
@@ -235,8 +240,11 @@ class VehicleActuatorUDP:
             self._estop = estop
         if throttle is not None:
             self._throttle = max(0.0, min(1.0, float(throttle)))
-        if mode is not None and mode.upper() in VALID_MODES:
-            self._mode = mode.upper()
+        if mode is not None:
+            m = mode.upper()
+            if m not in VALID_MODES:
+                raise ValueError(f"Invalid mode '{mode}', use: {VALID_MODES}")
+            self._mode = m
         if brake is not None:
             self._brake = max(0.0, min(1.0, float(brake)))
         if steer is not None:
