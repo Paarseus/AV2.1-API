@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-DWA Controller for Ackermann Vehicle
+DWA Controller for Ackermann Vehicle with LIDAR
 
-Synthetic obstacle avoidance test using Dynamic Window Approach.
+Real-time obstacle avoidance using Dynamic Window Approach with live LIDAR data.
 """
 
 import time
@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from pyproj import Transformer
 
 from sensors.xsens_receiver import XsensReceiver
+from sensors.lidar_interface import VelodyneLIDAR, LidarState
 from actuators import VehicleActuatorUDP
 from planning import AckermannDWACostmap
 from perception import OccupancyGrid2D, Costmap
@@ -19,8 +20,8 @@ from control import PID
 from utils import load_config
 
 
-class DWARunner:
-    """DWA-based vehicle controller with synthetic obstacles."""
+class DWALidarRunner:
+    """DWA-based vehicle controller with live LIDAR obstacle detection."""
 
     def __init__(self):
         # Load config
@@ -41,25 +42,26 @@ class DWARunner:
         grid_cfg = cfg['perception']['occupancy_grid']
         self.grid_size = grid_cfg['width']
         self.grid_resolution = grid_cfg['resolution']
+        self.grid_decay = grid_cfg['decay_factor']
+
+        # LIDAR
+        lidar_cfg = cfg['sensors']['lidar']
+        self.lidar_port = lidar_cfg['port']
+        self.lidar_z_min = lidar_cfg['z_min']
+        self.lidar_z_max = lidar_cfg['z_max']
+        self.lidar_range_min = lidar_cfg.get('range_min', 0.5)
+        self.lidar_range_max = lidar_cfg.get('range_max', 50.0)
 
         # Navigation
         self.goal_tolerance = cfg['planning']['goal_tolerance']
-        self.goal_distance = 20.0  # Just past last obstacle
+        self.goal_distance = 20.0  # Goal distance ahead
         self.control_rate_hz = cfg['system']['control_rate_hz']
-        # Zigzag course: (distance, lateral_offset, radius)
-        # Grid is 40m centered, so max ~18m ahead visible
-        self.obstacles_spec = [
-            (5.0, -2.0, 1.0),   # Left
-            (9.0, 2.0, 1.0),    # Right
-            (13.0, -2.0, 1.0),  # Left
-            (17.0, 2.0, 1.0),   # Right
-        ]
 
         # Actuator
         udp_cfg = cfg['actuators']['udp']
         self.actuator_ip = udp_cfg['teensy_ip']
         self.actuator_port = udp_cfg['teensy_port']
-        self.min_throttle = cfg['actuators'].get('min_throttle', 0.15)
+        self.min_throttle = cfg['actuators'].get('min_throttle', 0.0)
         self.max_throttle = cfg['actuators']['max_throttle']
 
         # PID speed controller
@@ -74,6 +76,8 @@ class DWARunner:
 
         # Runtime state
         self.gps = None
+        self.lidar = None
+        self.lidar_state = None
         self.actuator = None
         self.dwa = None
         self.grid = None
@@ -117,6 +121,32 @@ class DWARunner:
             print(f"[GPS] Error: {e}")
             return False
 
+    def setup_lidar(self):
+        """Initialize LIDAR and wait for data."""
+        print("[LIDAR] Starting...")
+
+        try:
+            self.lidar = VelodyneLIDAR(port=self.lidar_port)
+            if not self.lidar.connect() or not self.lidar.start():
+                print("[LIDAR] Connection failed")
+                return False
+
+            self.lidar_state = LidarState(self.lidar)
+
+            # Wait for data
+            for i in range(25):
+                if self.lidar_state.get_points() is not None:
+                    print(f"[LIDAR] Data received (z_min={self.lidar_z_min}, z_max={self.lidar_z_max})")
+                    return True
+                time.sleep(0.2)
+
+            print("[LIDAR] No data received")
+            return False
+
+        except Exception as e:
+            print(f"[LIDAR] Error: {e}")
+            return False
+
     def setup_dwa(self):
         """Initialize DWA planner and costmap."""
         print("[DWA] Setting up...")
@@ -125,6 +155,7 @@ class DWARunner:
             width=self.grid_size,
             height=self.grid_size,
             resolution=self.grid_resolution,
+            decay_factor=self.grid_decay,
             use_raycasting=False
         )
 
@@ -156,36 +187,23 @@ class DWARunner:
         print(f"[DWA] Grid: {self.grid_size}m, speed: {dwa_cfg['max_speed']} m/s")
         return True
 
-    def setup_obstacles(self):
-        """Place synthetic obstacles ahead of car based on current heading."""
-        print("[OBS] Setting up...")
-
-        if not self.gps or not self.grid:
-            print("[OBS] GPS/Grid not ready")
-            return False
+    def setup_goal(self):
+        """Set goal ahead of current heading."""
+        print("[GOAL] Setting up...")
 
         heading = self._wait_for_heading()
         if heading is None:
             return False
 
-        print(f"[OBS] Heading: {math.degrees(heading):.1f} deg ENU (0=East, 90=North)")
+        print(f"[GOAL] Heading: {math.degrees(heading):.1f} deg ENU")
 
         cos_h, sin_h = math.cos(heading), math.sin(heading)
-
-        # Place goal ahead in heading direction
         self.goal_utm = (
             self.start_utm[0] + self.goal_distance * cos_h,
             self.start_utm[1] + self.goal_distance * sin_h
         )
 
-        # Place obstacles rotated into heading frame
-        for dist, lat, radius in self.obstacles_spec:
-            ox = dist * cos_h - lat * sin_h
-            oy = dist * sin_h + lat * cos_h
-            self._add_obstacle(ox, oy, radius)
-            print(f"[OBS] Added at ({ox:.1f}, {oy:.1f})")
-
-        self.costmap.update(self.grid, threshold=0.55)
+        print(f"[GOAL] Set {self.goal_distance}m ahead")
         return True
 
     def _wait_for_heading(self, attempts=10, delay=0.5):
@@ -194,26 +212,11 @@ class DWARunner:
             heading = self.gps.get_heading_enu()
             if heading is not None and not np.isnan(heading):
                 return heading
-            print(f"[OBS] Waiting for heading... ({i + 1}/{attempts})")
+            print(f"[GOAL] Waiting for heading... ({i + 1}/{attempts})")
             time.sleep(delay)
 
-        print("[OBS] ERROR: No valid heading from GPS")
+        print("[GOAL] ERROR: No valid heading from GPS")
         return None
-
-    def _add_obstacle(self, cx, cy, radius):
-        """Add circular obstacle to grid using vectorized operations."""
-        # Create coordinate grids
-        rows = np.arange(self.grid.cells_y)
-        cols = np.arange(self.grid.cells_x)
-        col_grid, row_grid = np.meshgrid(cols, rows)
-
-        # Convert to world coordinates
-        wx = col_grid * self.grid.resolution - self.grid.origin_x
-        wy = self.grid.origin_y - row_grid * self.grid.resolution
-
-        # Mark cells within radius
-        mask = np.hypot(wx - cx, wy - cy) < radius
-        self.grid.grid[mask] = 5.0
 
     def setup_actuators(self):
         """Initialize UDP actuator connection."""
@@ -240,7 +243,7 @@ class DWARunner:
 
     def run(self):
         """Main control loop."""
-        if not all([self.gps, self.dwa, self.costmap, self.goal_utm]):
+        if not all([self.gps, self.lidar_state, self.dwa, self.costmap, self.goal_utm]):
             print("[RUN] Not initialized")
             return
 
@@ -284,6 +287,22 @@ class DWARunner:
                     time.sleep(dt)
                     continue
 
+                # Update grid from LIDAR
+                points = self.lidar_state.get_points()
+                if points is not None and len(points) > 0:
+                    # Height + range filter
+                    ranges = np.hypot(points[:, 0], points[:, 1])
+                    mask = ((points[:, 2] > self.lidar_z_min) &
+                            (points[:, 2] < self.lidar_z_max) &
+                            (ranges > self.lidar_range_min) &
+                            (ranges < self.lidar_range_max))
+                    filtered = points[mask]
+                    if len(filtered) > 0:
+                        self.grid.update(filtered[:, :2])
+
+                # Update costmap
+                self.costmap.update(self.grid, threshold=0.55)
+
                 # Convert to grid frame
                 veh_utm = self.gps_to_utm(lat, lon)
                 veh_grid = (veh_utm[0] - self.start_utm[0], veh_utm[1] - self.start_utm[1])
@@ -306,12 +325,11 @@ class DWARunner:
                 )
                 steering_rad = math.radians(steering_deg)
 
-                # PID speed control (compute once for actuator and logging)
+                # PID speed control
                 speed_error = v_cmd - speed
                 throttle = self.speed_pid.compute(speed_error, dt)
 
                 # Actuate
-                # Note: steering sign negated to match actuator convention (positive = right)
                 if self.actuator:
                     self.actuator.set_steer_deg(-steering_deg)
 
@@ -326,11 +344,12 @@ class DWARunner:
 
                 # Log every 10 iterations
                 if iteration % 10 == 0:
-                    print(f"[{iteration:4d}] spd:{speed:.2f} v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:+.1f} goal:{dist_to_goal:.1f}m")
+                    n_obs = len(self.costmap.get_obstacle_points())
+                    print(f"[{iteration:4d}] spd:{speed:.2f} v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:+.1f} goal:{dist_to_goal:.1f}m obs:{n_obs}")
 
-                # Visualize every 5 iterations
+                # Visualize every 10 iterations (for performance)
                 trajectory.append(veh_grid)
-                if iteration % 5 == 0:
+                if iteration % 10 == 0:
                     self._update_plot(ax, extent, trajectory, state, v_cmd, steering_cmd, steering_deg, goal_grid, dist_to_goal, throttle)
 
                 # Maintain loop rate
@@ -348,7 +367,10 @@ class DWARunner:
     def _update_plot(self, ax, extent, trajectory, state, v_cmd, steering_cmd, steering_deg, goal_grid, dist_to_goal, throttle):
         """Update visualization."""
         ax.clear()
-        ax.imshow(self.costmap.to_rgb(), origin='upper', extent=extent)
+
+        rgb = self.costmap.to_rgb()
+        if rgb is not None:
+            ax.imshow(rgb, origin='upper', extent=extent)
 
         # Trajectory
         if len(trajectory) > 1:
@@ -373,7 +395,8 @@ class DWARunner:
         ax.set_ylim(-15, 15)
         ax.set_aspect('equal')
 
-        ax.set_title(f'v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:.1f}° goal:{dist_to_goal:.1f}m')
+        n_obs = len(self.costmap.get_obstacle_points())
+        ax.set_title(f'v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:.1f}° goal:{dist_to_goal:.1f}m obs:{n_obs}')
         plt.pause(0.001)
 
     def stop(self):
@@ -389,6 +412,13 @@ class DWARunner:
             except Exception:
                 pass
 
+        if self.lidar:
+            try:
+                self.lidar.stop()
+                self.lidar.disconnect()
+            except Exception:
+                pass
+
         if self.gps:
             self.gps.stop()
 
@@ -396,19 +426,22 @@ class DWARunner:
 
 
 def main():
-    print("DWA Controller - Synthetic Obstacles\n")
+    print("DWA Controller - LIDAR Obstacle Avoidance\n")
 
-    runner = DWARunner()
+    runner = DWALidarRunner()
 
     try:
         if not runner.setup_gps(require_rtk=True):
             return 1
 
-        if not runner.setup_dwa():
+        if not runner.setup_lidar():
             return 2
 
-        if not runner.setup_obstacles():
+        if not runner.setup_dwa():
             return 3
+
+        if not runner.setup_goal():
+            return 4
 
         runner.setup_actuators()
 

@@ -29,7 +29,7 @@ vehicle:
   wheelbase: 1.23          # Distance between axles (meters)
   max_steering_deg: 28.0   # Maximum steering angle (degrees)
   robot_radius: 0.5        # Collision radius for planning (meters)
-  safety_margin: 0.5       # Extra clearance beyond robot_radius (meters)
+  safety_margin: 0.2       # Extra clearance beyond robot_radius (meters)
 
 # Control Parameters
 control:
@@ -66,7 +66,7 @@ planning:
 
   # DWA Parameters
   dwa:
-    max_speed: 1.0         # Maximum forward speed (m/s)
+    max_speed: 2.5         # Maximum forward speed (m/s)
     min_speed: 0.0         # Minimum speed (m/s)
     max_accel: 0.5         # Maximum acceleration (m/s^2)
     max_yaw_rate: 1.0      # Maximum angular velocity (rad/s)
@@ -82,29 +82,29 @@ planning:
   # Ackermann DWA Parameters
   ackermann_dwa:
     max_speed: 1.0
-    min_speed: 0.0
-    max_accel: 0.5
+    min_speed: 0.0     # Allow starting from rest (dynamic window constraint)
+    max_accel: 6.0     # Fast acceleration
     max_steering: 0.6      # ~35 degrees
     max_steering_rate: 1.0  # ~60 deg/s
     v_resolution: 0.02
     steering_resolution: 0.035  # ~2 degrees
     dt: 0.1
     predict_time: 3.0
-    to_goal_cost_gain: 0.01
-    speed_cost_gain: 1.0
-    obstacle_cost_gain: 2.0
-    goal_dist_cost_gain: 0.3
+    to_goal_cost_gain: 0.01    # Heading alignment (low = allow steering)
+    speed_cost_gain: 1.0       # Prefer moving
+    obstacle_cost_gain: 2.0    # Obstacle avoidance (high = avoid more)
+    goal_dist_cost_gain: 0.3   # Distance to goal
 
 # Perception Parameters
 perception:
   # Occupancy Grid
   occupancy_grid:
-    width: 40.0            # Grid width (meters)
-    height: 40.0           # Grid height (meters)
-    resolution: 0.1        # Cell size (meters)
+    width: 20.0            # Grid width (meters)
+    height: 20.0           # Grid height (meters)
+    resolution: 0.2        # Cell size (meters)
     log_odds_occ: 0.4      # Log-odds increment for occupied
     log_odds_free: -0.2    # Log-odds increment for free
-    decay_factor: 0.95     # Temporal decay per second
+    decay_factor: 0.5      # Fast temporal decay (matches example)
     use_raycasting: true   # Enable Bresenham raycasting
 
   # Costmap
@@ -127,6 +127,7 @@ actuators:
 
   # Safety
   max_throttle: 0.4        # Maximum throttle limit (0-1)
+  min_throttle: 0.0        # Minimum throttle (0 = no floor)
   watchdog_timeout: 0.5    # Teensy E-stop timeout (seconds)
 
 # Sensor Configuration
@@ -143,4 +144,5 @@ sensors:
     # Height filtering for ground plane removal
     z_min: -0.5              # Min height to keep (meters, relative to sensor)
     z_max: 2.0               # Max height to keep (meters)
+    range_min: 1.0           # Ignore points closer than this (car body)
     range_max: 50.0          # Maximum range (meters)
