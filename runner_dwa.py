@@ -15,6 +15,7 @@ from sensors.xsens_receiver import XsensReceiver
 from actuators import VehicleActuatorUDP
 from planning import AckermannDWACostmap
 from perception import OccupancyGrid2D, Costmap
+from control import PID
 from utils import load_config
 
 
@@ -33,10 +34,8 @@ class DWARunner:
         self.robot_radius = veh_cfg['robot_radius']
         self.safety_margin = veh_cfg['safety_margin']
 
-        # Speed/throttle
+        # Speed
         self.max_speed = cfg['planning']['ackermann_dwa']['max_speed']
-        self.min_throttle = 0.3  # Hardcoded default
-        self.max_throttle = cfg['actuators']['max_throttle']
 
         # Grid
         grid_cfg = cfg['perception']['occupancy_grid']
@@ -53,6 +52,16 @@ class DWARunner:
         udp_cfg = cfg['actuators']['udp']
         self.actuator_ip = udp_cfg['teensy_ip']
         self.actuator_port = udp_cfg['teensy_port']
+
+        # PID speed controller
+        pid_cfg = cfg['control']['pid']
+        self.speed_pid = PID(
+            kp=pid_cfg['kp'],
+            ki=pid_cfg['ki'],
+            kd=pid_cfg['kd'],
+            output_min=pid_cfg['output_min'],
+            output_max=pid_cfg['output_max']
+        )
 
         # Runtime state
         self.gps = None
@@ -115,18 +124,20 @@ class DWARunner:
             safety_margin=self.safety_margin
         )
 
+        # Use config for all DWA parameters
+        dwa_cfg = self.cfg['planning']['ackermann_dwa']
         self.dwa = AckermannDWACostmap(config={
-            'max_speed': self.max_speed,
-            'min_speed': 0.0,
+            'max_speed': dwa_cfg['max_speed'],
+            'min_speed': dwa_cfg['min_speed'],
             'wheelbase': self.wheelbase,
-            'max_steering': math.radians(self.max_steering_deg),
-            'max_steering_rate': math.radians(60),
-            'max_accel': 0.5,
-            'predict_time': 3.0,
-            'dt': 0.1,
+            'max_steering': dwa_cfg['max_steering'],
+            'max_steering_rate': dwa_cfg['max_steering_rate'],
+            'max_accel': dwa_cfg['max_accel'],
+            'predict_time': dwa_cfg['predict_time'],
+            'dt': dwa_cfg['dt'],
         })
 
-        print(f"[DWA] Grid: {self.grid_size}m, speed: {self.max_speed} m/s")
+        print(f"[DWA] Grid: {self.grid_size}m, speed: {dwa_cfg['max_speed']} m/s")
         return True
 
     def setup_obstacles(self):
@@ -211,14 +222,6 @@ class DWARunner:
             self.actuator = None
             return False
 
-    def _compute_throttle(self, v_cmd):
-        """Map DWA velocity command to throttle value."""
-        if v_cmd <= 0.01:
-            return 0.0
-        ratio = v_cmd / self.max_speed
-        throttle = self.min_throttle + ratio * (self.max_throttle - self.min_throttle)
-        return np.clip(throttle, self.min_throttle, self.max_throttle)
-
     def run(self):
         """Main control loop."""
         if not all([self.gps, self.dwa, self.costmap, self.goal_utm]):
@@ -287,11 +290,14 @@ class DWARunner:
                 )
                 steering_rad = math.radians(steering_deg)
 
+                # PID speed control (compute once for actuator and logging)
+                speed_error = v_cmd - speed
+                throttle = self.speed_pid.compute(speed_error, dt)
+
                 # Actuate
                 # Note: steering sign negated to match actuator convention (positive = right)
                 if self.actuator:
                     self.actuator.set_steer_deg(-steering_deg)
-                    throttle = self._compute_throttle(v_cmd)
 
                     if v_cmd > 0.01:
                         self.actuator.set_throttle(throttle)
@@ -299,16 +305,16 @@ class DWARunner:
                     else:
                         self.actuator.set_throttle(0.0)
                         self.actuator.set_brake(0.5)
+                        self.speed_pid.reset()
 
                 # Log every 10 iterations
                 if iteration % 10 == 0:
-                    throttle = self._compute_throttle(v_cmd)
                     print(f"[{iteration:4d}] spd:{speed:.2f} v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:+.1f} goal:{dist_to_goal:.1f}m")
 
                 # Visualize every 5 iterations
                 trajectory.append(veh_grid)
                 if iteration % 5 == 0:
-                    self._update_plot(ax, extent, trajectory, state, v_cmd, steering_cmd, steering_deg, goal_grid, dist_to_goal)
+                    self._update_plot(ax, extent, trajectory, state, v_cmd, steering_cmd, steering_deg, goal_grid, dist_to_goal, throttle)
 
                 # Maintain loop rate
                 elapsed = time.time() - t0
@@ -322,7 +328,7 @@ class DWARunner:
             plt.ioff()
             plt.close()
 
-    def _update_plot(self, ax, extent, trajectory, state, v_cmd, steering_cmd, steering_deg, goal_grid, dist_to_goal):
+    def _update_plot(self, ax, extent, trajectory, state, v_cmd, steering_cmd, steering_deg, goal_grid, dist_to_goal, throttle):
         """Update visualization."""
         ax.clear()
         ax.imshow(self.costmap.to_rgb(), origin='upper', extent=extent)
@@ -350,7 +356,6 @@ class DWARunner:
         ax.set_ylim(-15, 15)
         ax.set_aspect('equal')
 
-        throttle = self._compute_throttle(v_cmd)
         ax.set_title(f'v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:.1f}° goal:{dist_to_goal:.1f}m')
         plt.pause(0.001)
 

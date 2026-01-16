@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-UTM Navigator is an autonomous vehicle research platform developed at the Autonomous Vehicle Laboratory, Cal Poly Pomona. It's a full-scale AV testbed implementing the complete **sense-plan-control-act** pipeline for GPS-guided autonomous navigation with obstacle avoidance.
+UTM Navigator is an autonomous vehicle research platform developed at the Autonomous Vehicle Laboratory, Cal Poly Pomona. It's a full-scale AV testbed implementing the **sense-plan-control-act** pipeline for GPS-guided autonomous navigation with obstacle avoidance.
 
 ## Architecture
 
@@ -16,63 +16,33 @@ Sensors → Perception → Planning → Control → Actuators
  camera   IPM/BEV      ackermann_dwa
 ```
 
-### Core Modules
+### Key Data Flow
 
-- **`sensors/`** - Hardware interfaces (Xsens GPS/IMU, Velodyne LIDAR, cameras)
-- **`perception/`** - Occupancy grids (log-odds Bayesian), costmaps, IPM/BEV transforms
-- **`planning/`** - Route planning via OSMnx (`Navigator`), DWA local planners (`DWA`, `AckermannDWA`, `AckermannDWACostmap`)
-- **`control/`** - Pure Pursuit steering, PID, Ackermann vehicle model
-- **`actuators/`** - Teensy CAN interface (`VehicleActuator` for Serial, `VehicleActuatorUDP` for Ethernet)
-- **`webui/`** - Phone-based remote control with joystick, voice commands, E-STOP
-- **`firmware/`** - Teensy 4.1 CAN firmware (master.cpp, steer.cpp, throttle.cpp, brake.cpp)
+1. `XsensReceiver` (`sensors/xsens_receiver.py`) provides GPS position (UTM), heading (ENU), and speed via `xsensdeviceapi` SDK
+2. `Navigator` (`planning/navigator.py`) generates route waypoints from OSMnx road network, handles WGS84↔UTM transforms via `pyproj`
+3. `PurePursuitController` (`control/pure_pursuit.py`) computes steering angle; use `transform_path_to_vehicle_frame()` before calling
+4. `VehicleActuator` (Serial) or `VehicleActuatorUDP` (Ethernet) sends commands to Teensy
 
 ### Entry Points
 
-- **`runner.py`** - Main autonomous controller: GPS waypoint following with Pure Pursuit
+- **`runner.py`** - Main autonomous controller: GPS waypoint following with Pure Pursuit, control in background thread, visualization in main thread
 - **`runner_dwa.py`** - DWA-based obstacle avoidance mode
 - **`examples/`** - Standalone demos (DWA, LIDAR BEV, costmap, IPM calibration, manual control)
-
-### Key Data Flow
-
-1. `XsensReceiver` provides GPS position (UTM), heading (ENU), and speed
-2. `Navigator` generates route waypoints from OSMnx road network
-3. `PurePursuitController` computes steering angle to follow path
-4. `VehicleActuator`/`VehicleActuatorUDP` sends commands to Teensy via Serial/Ethernet
 
 ## Commands
 
 ### Running the Vehicle
 
 ```bash
-# Main autonomous mode (GPS waypoint following)
-python runner.py
-
-# DWA obstacle avoidance mode
-python runner_dwa.py
-
-# Manual keyboard control
-python examples/manual_control.py
-```
-
-### Running Examples
-
-```bash
-# DWA with synthetic obstacles
-python examples/dwa_synthetic.py
-python examples/ackermann_dwa_synthetic.py
-
-# DWA with LIDAR
-python examples/dwa_lidar.py
-python examples/ackermann_dwa_costmap_lidar.py
-
-# Perception demos
-python examples/visualize_bev_lidar.py
-python examples/costmap_synthetic.py
+python runner.py              # Main autonomous mode
+python runner_dwa.py          # DWA obstacle avoidance mode
+python examples/manual_control.py  # Manual keyboard control
 ```
 
 ### Running Tests
 
 ```bash
+# Individual test files (no pytest framework)
 python tests/test_occupancy_grid_fixes.py
 python tests/test_bev_lidar_synthetic.py
 python tests/test_multilayer_synthetic.py
@@ -80,64 +50,89 @@ python tests/test_straight_line_heading.py
 python tests/example_mti_receive_data.py  # Xsens sensor validation
 ```
 
+### Running Examples
+
+```bash
+# DWA planners
+python examples/dwa_synthetic.py
+python examples/ackermann_dwa_synthetic.py
+python examples/ackermann_dwa_costmap_lidar.py
+
+# Perception
+python examples/visualize_bev_lidar.py
+python examples/costmap_synthetic.py
+```
+
 ### WebUI (Phone Remote Control)
 
 ```bash
-cd webui
-pip install -r requirements.txt
+cd webui && pip install -r requirements.txt
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=AVConsole'
-python3 server.py
-# Open https://<your-ip>:8000 on phone
+python3 server.py  # Open https://<your-ip>:8000 on phone
 ```
 
-### Building Documentation
+## Configuration
 
-```bash
-cd docs && pip install -r requirements.txt && make html
+All parameters in `config/default.yaml`. Copy to `config/local.yaml` to customize.
+
+```python
+from utils import load_config
+cfg = load_config()  # Loads default.yaml (or local.yaml if present)
+wheelbase = cfg['vehicle']['wheelbase']
 ```
+
+Key config sections: `system`, `navigation`, `vehicle`, `control.pure_pursuit`, `control.pid`, `planning.dwa`, `planning.ackermann_dwa`, `perception.occupancy_grid`, `actuators`, `sensors`
 
 ## Key Technical Details
 
 ### Coordinate Systems
 - **WGS84** (lat/lon) - GPS input
-- **UTM** - Projected metric coordinates for planning/control (auto-detected by OSMnx, e.g., EPSG:32611 for Cal Poly Pomona)
-- **Vehicle Frame** - X forward, Y left
+- **UTM** - Projected metric coordinates for planning/control (auto-detected by OSMnx, e.g., EPSG:32611)
+- **Vehicle Frame** - X forward, Y left (origin at vehicle center)
+- **ENU** - East-North-Up for heading (0=East, π/2=North, CCW positive)
 
-### Important Constants
-- Max steering angle: 28 degrees (mechanical limit)
-- Goal tolerance: 2.0 meters
-- Min control speed: 0.1 m/s
+### Important Constants (from config)
+- Max steering angle: 28° (mechanical limit)
+- Wheelbase: 1.23m
+- Goal tolerance: 2.0m
+- Control rate: 20 Hz
+- Watchdog timeout: 500ms (Teensy triggers E-stop)
 
 ### Teensy UDP Protocol
 
 Commands to `192.168.13.177:5005`:
-- `E 1|0` - E-stop on/off
-- `T 0..1` - Throttle
-- `M N|D|S|R` - Mode (Neutral/Drive/Sport/Reverse)
-- `B 0..1` - Brake
-- `S -1..1` - Steer (left -, right +)
-- `A E=0 T=0.5 M=D B=0 S=0.1` - All-in-one command
-- `P` - Request state (returns JSON)
-
-Watchdog: 500ms timeout triggers E-stop if no command received.
+```
+E 1|0           - E-stop on/off
+T 0..1          - Throttle
+M N|D|S|R       - Mode (Neutral/Drive/Sport/Reverse)
+B 0..1          - Brake
+S -1..1         - Steer (left -, right +)
+A E=0 T=0.5 M=D B=0 S=0.1  - All-in-one command
+P               - Request state (returns JSON)
+```
 
 ### Thread Safety
-`VehicleState` class in `runner.py` uses `Lock()` for thread-safe sharing between control loop and visualization thread.
+`VehicleState` in `runner.py` uses `Lock()` for thread-safe sharing. Always use `.update()` and `.get()` methods.
 
-### Sensor Interfaces
-- **Xsens MTi-680G**: Uses `xsensdeviceapi` SDK, RTK-capable GPS/IMU
-- **Velodyne LIDAR**: UDP packet decoding in `examples/velodyne_decoder_final.py`
-- **Cameras**: USB/CSI via OpenCV, RealSense via `pyrealsense2`
+### Perception Notes
+- **OccupancyGrid2D**: Log-odds Bayesian update (-5.0 to 5.0 internal, 0.0 to 1.0 probability external), Bresenham raycasting
+- **Costmap**: Builds on occupancy grid, adds inflation for robot radius
 
-### Planning Algorithms
-- **Pure Pursuit**: Speed-adaptive lookahead distance for path tracking
-- **DWA**: Dynamic Window Approach with differential (`DWA`) and Ackermann (`AckermannDWA`, `AckermannDWACostmap`) variants
-- **Occupancy Grid**: Log-odds Bayesian update with Bresenham raycasting
+## Module Quick Reference
+
+| Module | Key Classes | Purpose |
+|--------|-------------|---------|
+| `sensors/` | `XsensReceiver` | GPS/IMU via xsensdeviceapi SDK |
+| `perception/` | `OccupancyGrid2D`, `Costmap` | Probabilistic grid mapping |
+| `planning/` | `Navigator`, `DWA`, `AckermannDWA`, `AckermannDWACostmap` | Route planning, local planners |
+| `control/` | `PurePursuitController`, `AckermannVehicle` | Path tracking, vehicle model |
+| `actuators/` | `VehicleActuator`, `VehicleActuatorUDP` | Serial/Ethernet to Teensy |
+| `utils/` | `load_config`, `ControlLogger` | Config loader, data logging |
 
 ## Dependencies
 
-Core: `numpy`, `scipy`, `matplotlib`, `opencv-python`
-Planning: `osmnx`, `networkx`, `pyproj`
+Core: `numpy`, `scipy`, `matplotlib`, `opencv-python`, `pyyaml`
+Planning: `osmnx`, `networkx`, `pyproj`, `shapely`
 Sensors: `xsensdeviceapi`, `pyrealsense2` (optional)
 Visualization: `open3d` (optional)
 WebUI: `fastapi`, `uvicorn`, `websockets`
@@ -146,9 +141,4 @@ WebUI: `fastapi`, `uvicorn`, `websockets`
 
 ```bash
 export PYTHONPATH=/path/to/FINALE:$PYTHONPATH
-
-# For perception module
-conda create -n perception python=3.9
-conda activate perception
-pip install numpy opencv-python open3d pyrealsense2
 ```

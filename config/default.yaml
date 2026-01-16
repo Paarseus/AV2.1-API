@@ -14,11 +14,11 @@ system:
 
 # Navigation
 navigation:
-  # Default destination (Cal Poly Pomona area)
-  destination_lat: 34.059289
-  destination_lon: -117.822093
+  # Default destination (Nominatim)
+  destination_lat: 34.057703
+  destination_lon: -117.822211
   # Route planning
-  network_type: "drive"       # OSMnx network type: drive, walk, bike
+  network_type: "bike"        # OSMnx network type: drive, walk, bike
   waypoint_spacing: 2.0       # Distance between waypoints (meters)
   # Timeouts
   rtk_timeout: 60.0           # Max wait for RTK fix (seconds)
@@ -42,17 +42,27 @@ control:
 
   # PID (for speed control)
   pid:
-    kp: 0.3
-    ki: 0.01
-    kd: 0.05
+    kp: 0.34
+    ki: 0.15
+    kd: 0.065
     output_min: 0.0
     output_max: 1.0
+
+  # Heading PID (for steering correction using IMU yaw)
+  # Tuned empirically - negative gains due to sign convention
+  heading_pid:
+    kp: -1.8           # Steering correction per radian of heading error
+    ki: -0.12          # Integral gain for steady-state error
+    kd: -0.4           # Derivative gain for damping
+    output_min: -1.0   # Full left steering
+    output_max: 1.0    # Full right steering
 
 # Planning Parameters
 planning:
   # Goal tolerance
   goal_tolerance: 2.0      # Distance to consider goal reached (meters)
   min_control_speed: 0.1   # Minimum speed for control (m/s)
+  target_speed: 1.0        # Target speed for PID control (m/s)
 
   # DWA Parameters
   dwa:

@@ -21,9 +21,9 @@ from threading import Thread, Lock, Event
 
 from planning import Navigator
 from sensors.xsens_receiver import XsensReceiver
-from control import PurePursuitController, transform_path_to_vehicle_frame
+from control import PurePursuitController, transform_path_to_vehicle_frame, PID
 from perception.visualization import GPSVisualizer
-from actuators import VehicleActuator
+from actuators import VehicleActuatorUDP
 from utils import ControlLogger, load_config
 
 
@@ -137,7 +137,9 @@ class AutonomousRunner:
         self.nav: Optional[Navigator] = None
         self.controller: Optional[PurePursuitController] = None
         self.visualizer: Optional[GPSVisualizer] = None
-        self.actuator: Optional[VehicleActuator] = None
+        self.actuator: Optional[VehicleActuatorUDP] = None
+        self.speed_pid: Optional[PID] = None
+        self.target_speed: float = cfg['planning'].get('target_speed', 1.0)
 
         # Route data
         self.waypoints_utm: Optional[np.ndarray] = None
@@ -311,6 +313,18 @@ class AutonomousRunner:
             print(f"[CONTROL] INFO: Lookahead gain: {K_dd:.3f}")
             print(f"[CONTROL] INFO: Lookahead range: [{min_lookahead:.1f}, {max_lookahead:.1f}]m")
 
+            # Initialize PID speed controller
+            pid_cfg = self.cfg['control']['pid']
+            self.speed_pid = PID(
+                kp=pid_cfg['kp'],
+                ki=pid_cfg['ki'],
+                kd=pid_cfg['kd'],
+                output_min=pid_cfg['output_min'],
+                output_max=pid_cfg['output_max']
+            )
+            print(f"[CONTROL] INFO: PID speed controller: Kp={pid_cfg['kp']}, Ki={pid_cfg['ki']}, Kd={pid_cfg['kd']}")
+            print(f"[CONTROL] INFO: Target speed: {self.target_speed:.2f} m/s")
+
             # Initialize vehicle state for thread-safe control (required even without visualization)
             if self.start_latlon and self.nav:
                 start_x, start_y = self.nav.gps_to_utm(*self.start_latlon)
@@ -397,25 +411,25 @@ class AutonomousRunner:
         print("[SYSTEM] INFO: ACTUATOR SETUP")
         print("="*70)
 
-        act_cfg = self.cfg['actuators']['serial']
-        serial_port = act_cfg['port']
-        serial_baud = act_cfg['baud']
+        act_cfg = self.cfg['actuators']['udp']
+        teensy_ip = act_cfg['teensy_ip']
+        teensy_port = act_cfg['teensy_port']
 
         try:
-            actuator = VehicleActuator(port=serial_port, baud=serial_baud)
+            actuator = VehicleActuatorUDP(ip=teensy_ip, port=teensy_port, keepalive=True)
 
             # Initialize to safe state
             actuator.estop(False)
-            actuator.set_mode("N")
+            actuator.set_mode("D")
             actuator.set_throttle(0.0)
             actuator.set_brake(0.0)
             actuator.set_steer_norm(0.0)
 
             self.actuator = actuator
 
-            print(f"[ACTUATOR] INFO: Actuator initialized:")
-            print(f"[ACTUATOR] INFO: Port: {serial_port}")
-            print(f"[ACTUATOR] INFO: Mode: Neutral, E-stop: OFF")
+            print(f"[ACTUATOR] INFO: Actuator initialized (UDP):")
+            print(f"[ACTUATOR] INFO: Teensy: {teensy_ip}:{teensy_port}")
+            print(f"[ACTUATOR] INFO: Mode: Drive, E-stop: OFF")
             print(f"[ACTUATOR] INFO: Steering controlled by autonomous system")
             print(f"[ACTUATOR] INFO: Throttle/brake/mode available for manual control")
 
@@ -571,9 +585,16 @@ class AutonomousRunner:
                 # =============================================================
                 # 7. ACTUATE - Send command to actuators
                 # =============================================================
+                # Compute throttle via PID speed control (always, even when stationary)
+                throttle = 0.0
+                if self.speed_pid:
+                    speed_error = self.target_speed - state_speed
+                    throttle = self.speed_pid.compute(speed_error, dt)
+
                 if self.actuator:
                     try:
                         self.actuator.set_steer_deg(-steering_deg)  # Negate: actuator uses opposite sign convention
+                        self.actuator.set_throttle(throttle)
                     except Exception as e:
                         print(f"[ACTUATOR] ERROR: Actuator command failed: {e}")
 
@@ -619,8 +640,8 @@ class AutonomousRunner:
                 # =============================================================
                 if iteration % log_interval == 0:
                     print(f"[CONTROL] INFO: [{iteration:5d}] RTK: {rtk_status} | "
-                          f"Speed: {speed:5.2f} m/s | "
-                          f"Heading: {np.rad2deg(heading_rad):6.1f}° | "
+                          f"Speed: {state_speed:4.2f}/{self.target_speed:.1f} m/s | "
+                          f"Throttle: {throttle:4.2f} | "
                           f"Steering: {-steering_deg:+6.2f}° | "
                           f"Goal: {distance_to_goal:5.1f}m")
 
