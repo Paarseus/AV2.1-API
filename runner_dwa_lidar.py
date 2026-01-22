@@ -3,6 +3,7 @@
 DWA Controller for Ackermann Vehicle with LIDAR
 
 Real-time obstacle avoidance using Dynamic Window Approach with live LIDAR data.
+Uses ego-centric coordinate frame: vehicle always at origin (0,0,0).
 """
 
 import time
@@ -10,6 +11,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from pyproj import Transformer
+from threading import Thread, Lock, Event
 
 from sensors.xsens_receiver import XsensReceiver
 from sensors.lidar_interface import VelodyneLIDAR, LidarState
@@ -18,6 +20,80 @@ from planning import AckermannDWACostmap
 from perception import OccupancyGrid2D, Costmap
 from control import PID
 from utils import load_config
+
+
+class VehicleState:
+    """
+    Thread-safe vehicle state container for sharing data between
+    control loop and visualization thread.
+    """
+
+    def __init__(self):
+        self._lock = Lock()
+
+        # World frame position (for trajectory tracking)
+        self._world_x = 0.0
+        self._world_y = 0.0
+        self._heading = 0.0
+        self._speed = 0.0
+        self._steering = 0.0
+
+        # Goal in vehicle frame
+        self._goal_veh_x = 0.0
+        self._goal_veh_y = 0.0
+
+        # Control outputs
+        self._v_cmd = 0.0
+        self._steering_cmd = 0.0
+        self._throttle = 0.0
+        self._dist_to_goal = 0.0
+
+        # DWA data for visualization
+        self._pred_trajectory = None
+        self._costmap_rgb = None
+        self._n_obstacles = 0
+
+        self._timestamp = time.time()
+
+    def update(self, **kwargs) -> None:
+        """Atomic update of vehicle state."""
+        with self._lock:
+            if 'world_x' in kwargs: self._world_x = kwargs['world_x']
+            if 'world_y' in kwargs: self._world_y = kwargs['world_y']
+            if 'heading' in kwargs: self._heading = kwargs['heading']
+            if 'speed' in kwargs: self._speed = kwargs['speed']
+            if 'steering' in kwargs: self._steering = kwargs['steering']
+            if 'goal_veh_x' in kwargs: self._goal_veh_x = kwargs['goal_veh_x']
+            if 'goal_veh_y' in kwargs: self._goal_veh_y = kwargs['goal_veh_y']
+            if 'v_cmd' in kwargs: self._v_cmd = kwargs['v_cmd']
+            if 'steering_cmd' in kwargs: self._steering_cmd = kwargs['steering_cmd']
+            if 'throttle' in kwargs: self._throttle = kwargs['throttle']
+            if 'dist_to_goal' in kwargs: self._dist_to_goal = kwargs['dist_to_goal']
+            if 'pred_trajectory' in kwargs: self._pred_trajectory = kwargs['pred_trajectory']
+            if 'costmap_rgb' in kwargs: self._costmap_rgb = kwargs['costmap_rgb']
+            if 'n_obstacles' in kwargs: self._n_obstacles = kwargs['n_obstacles']
+            self._timestamp = time.time()
+
+    def get(self) -> dict:
+        """Atomic read - returns consistent snapshot."""
+        with self._lock:
+            return {
+                'world_x': self._world_x,
+                'world_y': self._world_y,
+                'heading': self._heading,
+                'speed': self._speed,
+                'steering': self._steering,
+                'goal_veh_x': self._goal_veh_x,
+                'goal_veh_y': self._goal_veh_y,
+                'v_cmd': self._v_cmd,
+                'steering_cmd': self._steering_cmd,
+                'throttle': self._throttle,
+                'dist_to_goal': self._dist_to_goal,
+                'pred_trajectory': self._pred_trajectory,  # No copy - faster
+                'costmap_rgb': self._costmap_rgb,  # No copy - faster
+                'n_obstacles': self._n_obstacles,
+                'timestamp': self._timestamp
+            }
 
 
 class DWALidarRunner:
@@ -85,6 +161,11 @@ class DWALidarRunner:
         self.start_utm = None
         self.goal_utm = None
         self.running = False
+
+        # Thread-safe state
+        self.vehicle_state = VehicleState()
+        self.control_thread = None
+        self.control_stop_event = Event()
 
         # UTM transformer (WGS84 -> UTM Zone 11N)
         self.utm_transformer = Transformer.from_crs("EPSG:4326", "EPSG:32611", always_xy=True)
@@ -156,7 +237,7 @@ class DWALidarRunner:
             height=self.grid_size,
             resolution=self.grid_resolution,
             decay_factor=self.grid_decay,
-            use_raycasting=False
+            use_raycasting=True  # Enable raycasting for proper free-space clearing
         )
 
         self.costmap = Costmap(
@@ -227,7 +308,6 @@ class DWALidarRunner:
             self.actuator.estop(False)
             self.actuator.set_mode("D")
             self.actuator.set_throttle(0.0)
-            self.actuator.set_brake(0.0)
             self.actuator.set_steer_norm(0.0)
 
             if self.actuator.ping():
@@ -241,36 +321,20 @@ class DWALidarRunner:
             self.actuator = None
             return False
 
-    def run(self):
-        """Main control loop."""
-        if not all([self.gps, self.lidar_state, self.dwa, self.costmap, self.goal_utm]):
-            print("[RUN] Not initialized")
-            return
-
+    def _control_thread_func(self):
+        """
+        Control thread - runs in background at control_rate_hz.
+        Uses ego-centric coordinate frame: vehicle always at (0, 0, 0).
+        """
         dt = 1.0 / self.control_rate_hz
-        self.running = True
         steering_rad = 0.0
         iteration = 0
+        trajectory = []  # World frame trajectory for logging
 
-        # Precompute goal in grid frame (relative to start)
-        goal_grid = (
-            self.goal_utm[0] - self.start_utm[0],
-            self.goal_utm[1] - self.start_utm[1]
-        )
-
-        # Visualization
-        plt.ion()
-        fig, ax = plt.subplots(figsize=(10, 8))
-        extent = [
-            -self.grid.origin_x, self.grid.width - self.grid.origin_x,
-            -self.grid.origin_y, self.grid.height - self.grid.origin_y
-        ]
-        trajectory = []
-
-        print(f"[RUN] Starting at {self.control_rate_hz}Hz")
+        print(f"[CTRL] Control thread started @ {self.control_rate_hz}Hz")
 
         try:
-            while self.running:
+            while self.running and not self.control_stop_event.is_set():
                 t0 = time.time()
 
                 # Get sensor data
@@ -287,7 +351,36 @@ class DWALidarRunner:
                     time.sleep(dt)
                     continue
 
-                # Update grid from LIDAR
+                # Vehicle position in world frame (relative to start)
+                veh_utm = self.gps_to_utm(lat, lon)
+                veh_world_x = veh_utm[0] - self.start_utm[0]
+                veh_world_y = veh_utm[1] - self.start_utm[1]
+
+                # Goal in world frame (relative to start)
+                goal_world_x = self.goal_utm[0] - self.start_utm[0]
+                goal_world_y = self.goal_utm[1] - self.start_utm[1]
+
+                # Distance to goal (world frame)
+                dx = goal_world_x - veh_world_x
+                dy = goal_world_y - veh_world_y
+                dist_to_goal = math.hypot(dx, dy)
+
+                # Check goal reached
+                if dist_to_goal < self.goal_tolerance:
+                    print(f"[CTRL] Goal reached! {dist_to_goal:.1f}m")
+                    self.running = False
+                    break
+
+                # Transform goal to vehicle frame (rotate by -heading)
+                # Vehicle frame: X=forward, Y=left
+                cos_h = math.cos(-heading)
+                sin_h = math.sin(-heading)
+                goal_veh = (
+                    dx * cos_h - dy * sin_h,
+                    dx * sin_h + dy * cos_h
+                )
+
+                # Update grid from LIDAR (points already in vehicle frame)
                 points = self.lidar_state.get_points()
                 if points is not None and len(points) > 0:
                     # Height + range filter
@@ -303,19 +396,10 @@ class DWALidarRunner:
                 # Update costmap
                 self.costmap.update(self.grid, threshold=0.55)
 
-                # Convert to grid frame
-                veh_utm = self.gps_to_utm(lat, lon)
-                veh_grid = (veh_utm[0] - self.start_utm[0], veh_utm[1] - self.start_utm[1])
-
-                # Check goal
-                dist_to_goal = np.hypot(veh_grid[0] - goal_grid[0], veh_grid[1] - goal_grid[1])
-                if dist_to_goal < self.goal_tolerance:
-                    print(f"[RUN] Goal reached! {dist_to_goal:.1f}m")
-                    break
-
-                # DWA planning
-                state = (veh_grid[0], veh_grid[1], heading, speed, steering_rad)
-                v_cmd, steering_cmd = self.dwa.compute_velocity(state, goal_grid, self.costmap)
+                # DWA planning (ego-centric: vehicle at origin, heading=0)
+                # state = (x, y, yaw, v, steering)
+                state = (0.0, 0.0, 0.0, speed, steering_rad)
+                v_cmd, steering_cmd = self.dwa.compute_velocity(state, goal_veh, self.costmap)
 
                 # Clip steering to physical limit
                 steering_deg = np.clip(
@@ -336,77 +420,157 @@ class DWALidarRunner:
                     if v_cmd > 0.01:
                         throttle = np.clip(throttle, self.min_throttle, self.max_throttle)
                         self.actuator.set_throttle(throttle)
-                        self.actuator.set_brake(0.0)
                     else:
                         self.actuator.set_throttle(0.0)
-                        self.actuator.set_brake(0.0)
                         self.speed_pid.reset()
+
+                # Track world trajectory (limit to 500 points)
+                trajectory.append((veh_world_x, veh_world_y))
+                if len(trajectory) > 500:
+                    trajectory = trajectory[-500:]
+
+                # Get predicted trajectory (vehicle frame, starting at origin)
+                pred_traj = self.dwa.predict_trajectory(state, v_cmd, steering_cmd)
+
+                # Get costmap visualization
+                costmap_rgb = self.costmap.to_rgb()
+                n_obs = len(self.costmap.get_obstacle_points())
+
+                # Update thread-safe state for visualization
+                self.vehicle_state.update(
+                    world_x=veh_world_x,
+                    world_y=veh_world_y,
+                    heading=heading,
+                    speed=speed,
+                    steering=steering_rad,
+                    goal_veh_x=goal_veh[0],
+                    goal_veh_y=goal_veh[1],
+                    v_cmd=v_cmd,
+                    steering_cmd=steering_deg,
+                    throttle=throttle,
+                    dist_to_goal=dist_to_goal,
+                    pred_trajectory=pred_traj,
+                    costmap_rgb=costmap_rgb,
+                    n_obstacles=n_obs
+                )
 
                 # Log every 10 iterations
                 if iteration % 10 == 0:
-                    n_obs = len(self.costmap.get_obstacle_points())
-                    print(f"[{iteration:4d}] spd:{speed:.2f} v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:+.1f} goal:{dist_to_goal:.1f}m obs:{n_obs}")
-
-                # Visualize every 10 iterations (for performance)
-                trajectory.append(veh_grid)
-                if iteration % 10 == 0:
-                    self._update_plot(ax, extent, trajectory, state, v_cmd, steering_cmd, steering_deg, goal_grid, dist_to_goal, throttle)
+                    print(f"[{iteration:4d}] spd:{speed:.2f} v:{v_cmd:.2f} thr:{throttle:.2f} "
+                          f"str:{steering_deg:+.1f} goal:{dist_to_goal:.1f}m "
+                          f"goal_veh:({goal_veh[0]:.1f},{goal_veh[1]:.1f}) obs:{n_obs}")
 
                 # Maintain loop rate
                 elapsed = time.time() - t0
                 time.sleep(max(0, dt - elapsed))
                 iteration += 1
 
+        except Exception as e:
+            print(f"[CTRL] Error: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            print(f"[CTRL] Control thread stopped after {iteration} iterations")
+
+    def run(self):
+        """Main run method - starts control thread and visualization in main thread."""
+        if not all([self.gps, self.lidar_state, self.dwa, self.costmap, self.goal_utm]):
+            print("[RUN] Not initialized")
+            return
+
+        self.running = True
+
+        # Visualization setup
+        plt.ion()
+        fig, ax = plt.subplots(figsize=(10, 8))
+        extent = [
+            -self.grid.origin_x, self.grid.width - self.grid.origin_x,
+            -self.grid.origin_y, self.grid.height - self.grid.origin_y
+        ]
+
+        print(f"[RUN] Starting control @ {self.control_rate_hz}Hz, visualization @ 10Hz")
+
+        # Start control thread
+        self.control_thread = Thread(target=self._control_thread_func, daemon=False)
+        self.control_thread.start()
+
+        try:
+            viz_interval = 0.1  # 10 Hz
+            while self.running and self.control_thread.is_alive():
+                # Get latest state
+                state = self.vehicle_state.get()
+
+                # Update visualization
+                self._update_plot(ax, extent, state)
+
+                plt.pause(viz_interval)
+
         except KeyboardInterrupt:
             print("\n[RUN] Stopped by user")
         finally:
             self.running = False
+            self.control_stop_event.set()
+            if self.control_thread:
+                self.control_thread.join(timeout=3.0)
             plt.ioff()
             plt.close()
 
-    def _update_plot(self, ax, extent, trajectory, state, v_cmd, steering_cmd, steering_deg, goal_grid, dist_to_goal, throttle):
-        """Update visualization."""
+    def _update_plot(self, ax, extent, state):
+        """
+        Update visualization in vehicle frame.
+        Vehicle is always at origin (0, 0), heading along +X axis.
+        """
         ax.clear()
 
-        rgb = self.costmap.to_rgb()
+        # Costmap (vehicle-centered)
+        rgb = state['costmap_rgb']
         if rgb is not None:
             ax.imshow(rgb, origin='upper', extent=extent)
 
-        # Trajectory
-        if len(trajectory) > 1:
-            traj = np.array(trajectory)
-            ax.plot(traj[:, 0], traj[:, 1], 'b-', lw=2)
+        # Predicted trajectory (vehicle frame, centered at origin)
+        pred = state['pred_trajectory']
+        if pred is not None and len(pred) > 0:
+            ax.plot(pred[:, 0], pred[:, 1], 'c-', lw=2, label='Predicted')
 
-        # Predicted path
-        pred = self.dwa.predict_trajectory(state, v_cmd, steering_cmd)
-        ax.plot(pred[:, 0], pred[:, 1], 'c-', lw=2)
-
-        # Vehicle
-        veh_x, veh_y, heading = state[0], state[1], state[2]
-        ax.add_patch(plt.Circle((veh_x, veh_y), self.costmap.inflation_radius,
+        # Vehicle at origin
+        ax.add_patch(plt.Circle((0, 0), self.costmap.inflation_radius,
                                 color='b', fill=False, lw=2, ls='--'))
-        ax.arrow(veh_x, veh_y, math.cos(heading) * 1.5, math.sin(heading) * 1.5,
-                 head_width=0.3, color='blue')
+        ax.arrow(0, 0, 1.5, 0, head_width=0.3, color='blue')  # Heading along +X
 
-        # Goal
-        ax.plot(goal_grid[0], goal_grid[1], 'm*', ms=15)
+        # Goal in vehicle frame
+        goal_x = state['goal_veh_x']
+        goal_y = state['goal_veh_y']
+        ax.plot(goal_x, goal_y, 'm*', ms=15, label='Goal')
 
-        ax.set_xlim(-5, goal_grid[0] + 5)
-        ax.set_ylim(-15, 15)
+        # Dynamic axis limits based on goal position
+        x_max = max(goal_x + 2, 10)
+        ax.set_xlim(-5, x_max)
+        ax.set_ylim(-10, 10)
         ax.set_aspect('equal')
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc='upper left')
 
-        n_obs = len(self.costmap.get_obstacle_points())
-        ax.set_title(f'v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:.1f}° goal:{dist_to_goal:.1f}m obs:{n_obs}')
-        plt.pause(0.001)
+        steering_deg = state['steering_cmd']
+        v_cmd = state['v_cmd']
+        throttle = state['throttle']
+        dist = state['dist_to_goal']
+        n_obs = state['n_obstacles']
+
+        ax.set_title(f'v:{v_cmd:.2f} thr:{throttle:.2f} str:{steering_deg:.1f}\u00b0 '
+                     f'goal:{dist:.1f}m obs:{n_obs}')
 
     def stop(self):
         """Shutdown all systems."""
         self.running = False
+        self.control_stop_event.set()
+
+        # Wait for control thread
+        if self.control_thread and self.control_thread.is_alive():
+            self.control_thread.join(timeout=3.0)
 
         if self.actuator:
             try:
                 self.actuator.set_throttle(0.0)
-                self.actuator.set_brake(1.0)
                 self.actuator.set_steer_norm(0.0)
                 self.actuator.close()
             except Exception:

@@ -95,28 +95,19 @@ def main():
         while plt.fignum_exists(fig.number):
             points = state.get_points()
 
-            if points is not None and len(points) > 0:
-                # Filter by height
+            if points is not None and points.ndim == 2 and len(points) > 0:
+                # Filter by height and range
                 z = points[:, 2]
-                mask = (z >= cfg['pointcloud']['z_min']) & (z <= cfg['pointcloud']['z_max'])
+                r = np.sqrt(points[:, 0]**2 + points[:, 1]**2)
+                mask = ((z >= cfg['pointcloud']['z_min']) &
+                        (z <= cfg['pointcloud']['z_max']) &
+                        (r <= cfg['pointcloud']['range_max']))
                 filtered = points[mask]
 
-                # Filter by range
-                r = np.sqrt(filtered[:, 0]**2 + filtered[:, 1]**2)
-                mask2 = r <= cfg['pointcloud']['range_max']
-                filtered = filtered[mask2]
+                if len(filtered) > 0:
+                    scatter.set_offsets(filtered[:, :2])
 
-                # Update scatter
-                scatter.set_offsets(filtered[:, :2])
-
-                # Update stats
-                stats = (
-                    f"Total points: {len(points):,}\n"
-                    f"After filter: {len(filtered):,}\n"
-                    f"Z range: [{z.min():.2f}, {z.max():.2f}] m\n"
-                    f"X range: [{filtered[:,0].min():.1f}, {filtered[:,0].max():.1f}] m\n"
-                    f"Y range: [{filtered[:,1].min():.1f}, {filtered[:,1].max():.1f}] m"
-                )
+                stats = f"Total: {len(points):,}  Filtered: {len(filtered):,}  Z: [{z.min():.2f}, {z.max():.2f}]"
                 stats_text.set_text(stats)
 
             plt.pause(1.0 / cfg['visualization']['update_hz'])

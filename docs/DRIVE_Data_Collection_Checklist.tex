@@ -1,0 +1,190 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{xcolor}
+
+\begin{document}
+
+\begin{center}
+{\LARGE \textbf{DRIVE Paper Data Collection Checklist}}\\[0.5em]
+{\large ASEE Zone 4 Conference 2026}
+\end{center}
+
+\vspace{1.5em}
+
+%==============================================================================
+\section*{1. Platform Performance Data}
+
+Run autonomous navigation tests and record the following metrics:
+
+\vspace{0.5em}
+
+\begin{tabular}{@{}p{6cm}p{3cm}p{5cm}@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{How to Collect} \\
+\midrule
+Cross-track error (mean) & \_\_\_\_\_\_ m & Log position vs planned path \\[0.8em]
+Cross-track error (max) & \_\_\_\_\_\_ m & Max deviation from path \\[0.8em]
+Waypoint arrival tolerance & \_\_\_\_\_\_ m & Goal radius achieved \\[0.8em]
+Localization accuracy (RTK) & $\pm$\_\_\_\_\_\_ cm & Park at known point, log 60s \\[0.8em]
+Maximum autonomous speed & \_\_\_\_\_\_ mph & Fastest tested speed \\[0.8em]
+Typical operating speed & \_\_\_\_\_\_ mph & Normal demo speed \\[0.8em]
+Continuous operation time & \_\_\_\_\_\_ min & Longest autonomous run \\[0.8em]
+Total distance covered & \_\_\_\_\_\_ m & Sum of autonomous runs \\[0.8em]
+Obstacle detection range & \_\_\_\_\_\_ m & Place obstacle, test detection \\
+\bottomrule
+\end{tabular}
+
+\vspace{1em}
+
+\textbf{Test Procedure:}
+\begin{enumerate}[nosep]
+    \item Set 5--10 GPS waypoints on campus (parking lot or road)
+    \item Run Pure Pursuit autonomous navigation
+    \item Log: position, heading, target waypoint at each timestep
+    \item Calculate errors from logged data
+\end{enumerate}
+
+%==============================================================================
+\section*{2. Survey Data}
+
+Deploy the survey to all current and former students who worked with DRIVE.
+
+\vspace{0.5em}
+
+\begin{tabular}{@{}p{5cm}p{3cm}p{6cm}@{}}
+\toprule
+\textbf{Data Point} & \textbf{Value} & \textbf{Notes} \\
+\midrule
+Number of respondents & \_\_\_\_\_\_ / 14+ & Target: all students \\[0.8em]
+Response rate & \_\_\_\_\_\_ \% & Respondents / invited \\
+\bottomrule
+\end{tabular}
+
+\vspace{1em}
+
+\textbf{Section B Results (Self-Efficacy):}
+
+\vspace{0.5em}
+
+\begin{tabular}{@{}p{6cm}ccc@{}}
+\toprule
+\textbf{Competency} & \textbf{Before} & \textbf{After} & \textbf{Change} \\
+\midrule
+Debug HW/SW issues & \_\_\_\_ & \_\_\_\_ & +\_\_\_\_ \\[0.5em]
+Signal tracing & \_\_\_\_ & \_\_\_\_ & +\_\_\_\_ \\[0.5em]
+Sensor noise understanding & \_\_\_\_ & \_\_\_\_ & +\_\_\_\_ \\[0.5em]
+Control tuning & \_\_\_\_ & \_\_\_\_ & +\_\_\_\_ \\[0.5em]
+Safety system design & \_\_\_\_ & \_\_\_\_ & +\_\_\_\_ \\[0.5em]
+Industry readiness & \_\_\_\_ & \_\_\_\_ & +\_\_\_\_ \\
+\bottomrule
+\end{tabular}
+
+\vspace{1em}
+
+\textbf{Section C Results (Platform Experience):}
+
+\vspace{0.5em}
+
+\begin{tabular}{@{}p{8cm}cc@{}}
+\toprule
+\textbf{Statement} & \textbf{Mean} & \textbf{\% Agree} \\
+\midrule
+Increased motivation to learn & \_\_\_\_ & \_\_\_\_ \% \\[0.5em]
+Enhanced understanding of coursework & \_\_\_\_ & \_\_\_\_ \% \\[0.5em]
+Changed thinking about safety & \_\_\_\_ & \_\_\_\_ \% \\
+\bottomrule
+\end{tabular}
+
+\vspace{1em}
+
+\textbf{Section D Results (Open Response Themes):}
+
+\begin{enumerate}[nosep]
+    \item Theme 1: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+    \item Theme 2: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+    \item Theme 3: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+\end{enumerate}
+
+\textbf{Best Quotes for Paper:}
+
+\begin{enumerate}[nosep]
+    \item ``\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_''
+    \item ``\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_''
+\end{enumerate}
+
+%==============================================================================
+\section*{3. Student Demographics}
+
+\begin{tabular}{@{}p{5cm}p{3cm}@{}}
+\toprule
+\textbf{Category} & \textbf{Count} \\
+\midrule
+Total students engaged & \_\_\_\_\_\_ \\[0.5em]
+Semesters of deployment & \_\_\_\_\_\_ \\[0.5em]
+Sophomores & \_\_\_\_\_\_ \\[0.5em]
+Juniors & \_\_\_\_\_\_ \\[0.5em]
+Seniors & \_\_\_\_\_\_ \\[0.5em]
+Graduate students & \_\_\_\_\_\_ \\[0.5em]
+Alumni & \_\_\_\_\_\_ \\
+\bottomrule
+\end{tabular}
+
+%==============================================================================
+\section*{4. Already in Paper (Verify)}
+
+These values are already in the paper. Verify they are accurate:
+
+\vspace{0.5em}
+
+\begin{tabular}{@{}p{5cm}p{3cm}p{4cm}@{}}
+\toprule
+\textbf{Metric} & \textbf{Current Value} & \textbf{Verify} \\
+\midrule
+Control loop frequency & 20 Hz & $\square$ Confirmed \\[0.5em]
+Watchdog timeout & 500 ms & $\square$ Confirmed \\[0.5em]
+Max steering angle & 28$^\circ$ & $\square$ Confirmed \\[0.5em]
+Wheelbase & 1.23 m & $\square$ Confirmed \\[0.5em]
+Vehicle weight & 350 lbs & $\square$ Confirmed \\[0.5em]
+Platform cost & \$12--15k & $\square$ Confirmed \\[0.5em]
+Base vehicle cost & \$3,000 & $\square$ Confirmed \\[0.5em]
+Students engaged & 14 & $\square$ Confirmed \\[0.5em]
+Semesters & 3 & $\square$ Confirmed \\
+\bottomrule
+\end{tabular}
+
+%==============================================================================
+\section*{5. Photos/Videos Needed}
+
+\begin{tabular}{@{}p{6cm}p{2cm}p{5cm}@{}}
+\toprule
+\textbf{Item} & \textbf{Status} & \textbf{Notes} \\
+\midrule
+Vehicle photo (Figure 1) & $\square$ Have & Current: vehicle\_photo.jpg \\[0.5em]
+Autonomous navigation video & $\square$ Have & Optional supplementary \\[0.5em]
+Students working on platform & $\square$ Have & Optional for presentation \\
+\bottomrule
+\end{tabular}
+
+%==============================================================================
+\section*{6. Timeline}
+
+\begin{tabular}{@{}p{4cm}p{4cm}p{5cm}@{}}
+\toprule
+\textbf{Task} & \textbf{Deadline} & \textbf{Status} \\
+\midrule
+Submit abstract & $\sim$Nov 2025 & $\square$ Done \\[0.5em]
+IRB application & After acceptance & $\square$ Done \\[0.5em]
+Deploy survey & After IRB approval & $\square$ Done \\[0.5em]
+Run demo tests & Before paper deadline & $\square$ Done \\[0.5em]
+Collect survey responses & 1 week & $\square$ Done \\[0.5em]
+Analyze data & 2--3 days & $\square$ Done \\[0.5em]
+Update paper with results & Before deadline & $\square$ Done \\[0.5em]
+Submit full paper & $\sim$Jan 2026 & $\square$ Done \\
+\bottomrule
+\end{tabular}
+
+\end{document}

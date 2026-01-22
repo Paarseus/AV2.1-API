@@ -1,0 +1,703 @@
+\documentclass[11pt,letterpaper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+
+% Page geometry
+\geometry{margin=1in}
+
+% Colors
+\definecolor{tier1}{RGB}{180, 50, 50}
+\definecolor{tier2}{RGB}{50, 120, 180}
+\definecolor{tier3}{RGB}{80, 140, 80}
+\definecolor{linkblue}{RGB}{0, 102, 204}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkblue,
+    urlcolor=linkblue,
+    citecolor=linkblue
+}
+
+% Section formatting
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Learning Roadmap}
+\lhead{AV to Humanoid Robotics}
+\cfoot{\thepage}
+
+\title{\textbf{Strategic Learning Roadmap}\\[0.5em]
+\Large From Autonomous Vehicles to Humanoid Robotics}
+\author{Autonomous Vehicle Laboratory\\Cal Poly Pomona}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Your Current Position}
+%==============================================================================
+
+Based on analyzing the UTM Navigator codebase, you've built production-grade autonomous vehicle software with strong foundations and identified gaps.
+
+\subsection{Strong Foundations}
+
+\begin{itemize}
+    \item Vehicle kinematics \& coordinate systems (WGS84/UTM/Vehicle frame transforms)
+    \item Path tracking (Pure Pursuit with adaptive lookahead)
+    \item Reactive local planning (DWA with Ackermann constraints)
+    \item Grid-based mapping (log-odds Bayesian updates, Bresenham raycasting)
+    \item Real hardware integration (Xsens RTK-GPS, Velodyne LIDAR, Teensy CAN)
+    \item Production software practices (threading, config management, modular architecture)
+\end{itemize}
+
+\subsection{Key Gaps Identified}
+
+\begin{itemize}
+    \item No state estimation (Kalman filters, sensor fusion)
+    \item No trajectory optimization (MPC, LQR)
+    \item No reinforcement learning or sim2real
+    \item Vision/deep learning exists but disconnected from control loop
+    \item No dexterous manipulation experience
+\end{itemize}
+
+%==============================================================================
+\section{The LLM Era Reality Check}
+%==============================================================================
+
+The landscape has changed. Here's what LLMs \textbf{can} and \textbf{cannot} do for robotics engineers in 2026.
+
+\subsection{LLMs CAN Handle (Delegate Freely)}
+
+\begin{itemize}
+    \item Boilerplate code generation
+    \item API integrations and driver code
+    \item Documentation and technical writing
+    \item Debugging known patterns
+    \item Code refactoring and cleanup
+    \item Basic algorithm implementations (PID, A*, etc.)
+\end{itemize}
+
+\subsection{LLMs CANNOT Replace (Must Master Deeply)}
+
+\begin{itemize}
+    \item \textbf{Physical intuition} -- understanding why a robot falls, drifts, or fails
+    \item \textbf{System debugging} -- tracing issues across sensors $\rightarrow$ perception $\rightarrow$ planning $\rightarrow$ control $\rightarrow$ hardware
+    \item \textbf{Dynamics modeling} -- choosing the right simplifications for real-time control
+    \item \textbf{Reward engineering} -- designing cost functions that produce desired emergent behavior
+    \item \textbf{Sim2real transfer} -- understanding what physics matter and what can be randomized
+    \item \textbf{Safety reasoning} -- knowing failure modes and designing fallbacks
+\end{itemize}
+
+\textbf{Key insight}: LLMs are tools, not replacements. The engineers who thrive will be those who can specify problems precisely, validate solutions physically, and debug across the full stack.
+
+%==============================================================================
+\section{Mathematical Foundations}
+%==============================================================================
+
+Before tackling the robotics topics that follow (State Estimation, MPC, RL, etc.), you need solid mathematical foundations. The robotics algorithms are applications of math---without the fundamentals, you'll be pattern-matching code snippets without understanding why things work or how to debug when they don't.
+
+\subsection{Depth Levels Defined}
+
+Not all math needs the same depth. Here's what each level means:
+
+\begin{description}
+    \item[\textcolor{tier3}{Conceptual Understanding}] Know what the technique does and when to use it. Can use library implementations effectively. Sufficient for supporting skills.
+    \item[\textcolor{tier2}{Computational Fluency}] Can compute by hand and implement from scratch. Understand the derivations. Can debug numerical issues. Required for core skills.
+    \item[\textcolor{tier1}{Proof-Level Mastery}] Understand why theorems hold and their conditions. Can modify techniques for novel situations. Required for deep specialization.
+\end{description}
+
+%------------------------------------------------------------------------------
+\subsection{Core Mathematical Areas}
+%------------------------------------------------------------------------------
+
+%..............................................................................
+\subsubsection{Linear Algebra}
+
+\textbf{Depth:} \textcolor{tier1}{Proof-Level} for fundamentals, \textcolor{tier2}{Computational} for decompositions
+
+\textbf{Why it matters:} Linear algebra is the language of robotics. State estimation is matrix algebra. MPC solves matrix equations. Transformations are matrices. If you're weak here, everything else becomes harder.
+
+\textbf{Topics to master:}
+\begin{itemize}
+    \item Matrix operations, vector spaces, linear independence
+    \item Eigenvalues/eigenvectors and their geometric meaning
+    \item Singular Value Decomposition (SVD) -- appears everywhere
+    \item Matrix decompositions: QR, LU, Cholesky
+    \item Positive definite matrices (critical for optimization)
+    \item Matrix calculus: gradients, Jacobians w.r.t. matrices
+\end{itemize}
+
+\textbf{Enables:} State Estimation, MPC, Computer Vision, Dynamics, Everything
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Course: MIT 18.06 Linear Algebra (Gilbert Strang) -- FREE
+    \item Book: \textit{Linear Algebra Done Right} by Axler (theory focus)
+    \item Book: \textit{Matrix Computations} by Golub \& Van Loan (numerical focus)
+    \item Video: 3Blue1Brown ``Essence of Linear Algebra'' (visual intuition)
+\end{itemize}
+
+\textbf{Estimated time:} 4--6 weeks
+
+%..............................................................................
+\subsubsection{Multivariable Calculus}
+
+\textbf{Depth:} \textcolor{tier2}{Computational Fluency}
+
+\textbf{Why it matters:} Kinematics is built on Jacobians. Optimization uses gradients and Hessians. Control systems linearize around equilibria. You'll compute derivatives constantly.
+
+\textbf{Topics to master:}
+\begin{itemize}
+    \item Gradients, directional derivatives
+    \item Jacobian matrices (input-output relationships)
+    \item Hessian matrices (curvature for optimization)
+    \item Chain rule for composed functions
+    \item Taylor series expansions (linearization)
+    \item Implicit function theorem
+\end{itemize}
+
+\textbf{Enables:} Control, Optimization, Kinematics, Machine Learning
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Course: MIT 18.02 Multivariable Calculus -- FREE
+    \item Book: \textit{Calculus on Manifolds} by Spivak (rigorous)
+    \item Video: 3Blue1Brown ``Essence of Calculus''
+\end{itemize}
+
+\textbf{Estimated time:} 3--4 weeks
+
+%..............................................................................
+\subsubsection{Differential Equations}
+
+\textbf{Depth:} \textcolor{tier2}{Computational Fluency}
+
+\textbf{Why it matters:} Robot dynamics are differential equations. Control theory is about shaping their solutions. Simulation requires numerical integration. This is the math of motion.
+
+\textbf{Topics to master:}
+\begin{itemize}
+    \item First-order ODEs (analytical and numerical solutions)
+    \item Linear systems of ODEs (matrix exponential)
+    \item Stability analysis (eigenvalue conditions)
+    \item Numerical integration: Euler, Runge-Kutta (RK4)
+    \item State-space representation
+    \item Phase portraits and equilibrium analysis
+\end{itemize}
+
+\textbf{Enables:} Dynamics, Control, Simulation, State Estimation
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Course: MIT 18.03 Differential Equations -- FREE
+    \item Book: \textit{Nonlinear Dynamics and Chaos} by Strogatz (excellent intuition)
+    \item Library: \texttt{scipy.integrate} for numerical methods
+\end{itemize}
+
+\textbf{Estimated time:} 4--5 weeks
+
+%..............................................................................
+\subsubsection{Probability \& Statistics}
+
+\textbf{Depth:} \textcolor{tier1}{Proof-Level} for Gaussian/Bayesian concepts, \textcolor{tier2}{Computational} for estimation
+
+\textbf{Why it matters:} Sensors are noisy. State estimation is probabilistic inference. RL is built on expectation and variance. You need to think in distributions, not point values.
+
+\textbf{Topics to master:}
+\begin{itemize}
+    \item Bayes' theorem and Bayesian inference
+    \item Gaussian (Normal) distributions
+    \item Multivariate Gaussians, covariance matrices
+    \item Maximum Likelihood Estimation (MLE)
+    \item Maximum A Posteriori (MAP) estimation
+    \item Markov chains and Markov property
+    \item Conditional independence
+\end{itemize}
+
+\textbf{Enables:} State Estimation, SLAM, Reinforcement Learning, Perception
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Course: MIT 6.041 Probabilistic Systems Analysis -- FREE
+    \item Book: \textit{Probabilistic Robotics} by Thrun (robotics-specific)
+    \item Book: \textit{Pattern Recognition and Machine Learning} by Bishop (thorough)
+\end{itemize}
+
+\textbf{Estimated time:} 5--6 weeks
+
+%..............................................................................
+\subsubsection{3D Geometry \& Spatial Transformations}
+
+\textbf{Depth:} \textcolor{tier1}{Proof-Level} (this is core robotics math)
+
+\textbf{Why it matters:} Robots move in 3D space. Every joint, every camera, every sensor has a pose. Representing and composing rotations correctly is non-trivial. Mess this up and your robot will move wrong.
+
+\textbf{Topics to master:}
+\begin{itemize}
+    \item Rotation matrices and SO(3) (the rotation group)
+    \item Euler angles and their limitations (gimbal lock)
+    \item Quaternions (singularity-free rotation representation)
+    \item Homogeneous coordinates and SE(3) (rigid body transforms)
+    \item Transformation composition and inverses
+    \item Introduction to Lie groups and Lie algebras (so(3), se(3))
+\end{itemize}
+
+\textbf{Enables:} Kinematics, SLAM, Computer Vision, Control
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Book: \textit{Modern Robotics} by Lynch \& Park (excellent treatment)
+    \item Book: \textit{A Mathematical Introduction to Robotic Manipulation} by Murray, Li, Sastry
+    \item Library: \texttt{scipy.spatial.transform}, Pinocchio
+\end{itemize}
+
+\textbf{Estimated time:} 4--5 weeks
+
+%..............................................................................
+\subsubsection{Optimization Theory}
+
+\textbf{Depth:} \textcolor{tier2}{Computational Fluency}
+
+\textbf{Why it matters:} MPC is optimization. Motion planning is optimization. State estimation (batch form) is optimization. Machine learning is optimization. This skill pays dividends everywhere.
+
+\textbf{Topics to master:}
+\begin{itemize}
+    \item Convex sets and convex functions
+    \item Gradient descent and convergence conditions
+    \item Newton's method and quadratic convergence
+    \item Lagrange multipliers (equality constraints)
+    \item KKT conditions (inequality constraints)
+    \item Quadratic Programming (QP)
+    \item Basics of nonlinear programming
+\end{itemize}
+
+\textbf{Enables:} MPC, Motion Planning, State Estimation, Machine Learning
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Course: Stanford EE364a Convex Optimization (Boyd) -- FREE
+    \item Book: \textit{Convex Optimization} by Boyd \& Vandenberghe -- FREE online
+    \item Library: CVXPY, CasADi, OSQP
+\end{itemize}
+
+\textbf{Estimated time:} 5--6 weeks
+
+%------------------------------------------------------------------------------
+\subsection{Mathematics to Robotics Mapping}
+%------------------------------------------------------------------------------
+
+This table shows how each mathematical area connects to robotics applications:
+
+\begin{longtable}{@{}p{3cm}p{5cm}p{5.5cm}@{}}
+\toprule
+\textbf{Math Area} & \textbf{Key Concepts} & \textbf{Robotics Applications} \\
+\midrule
+\endhead
+Linear Algebra & SVD, Cholesky, eigendecomposition & Kalman filter, MPC solving, least squares \\
+\addlinespace
+Multivariable Calculus & Jacobians, Hessians, chain rule & Kinematics, optimization, linearization \\
+\addlinespace
+Differential Equations & Linear systems, stability, RK4 & Dynamics simulation, control design \\
+\addlinespace
+Probability & Bayes, Gaussians, covariance & State estimation, SLAM, sensor fusion \\
+\addlinespace
+3D Geometry & SO(3), SE(3), quaternions & Transforms, SLAM, computer vision \\
+\addlinespace
+Optimization & QP, KKT conditions, gradients & MPC, trajectory optimization, learning \\
+\bottomrule
+\end{longtable}
+
+%------------------------------------------------------------------------------
+\subsection{Recommended Math Learning Sequence}
+%------------------------------------------------------------------------------
+
+The dependencies between topics suggest this order:
+
+\begin{enumerate}
+    \item \textbf{Linear Algebra} (4--6 weeks) -- Foundation for everything else
+    \item \textbf{Multivariable Calculus} (3--4 weeks) -- Requires linear algebra
+    \item \textbf{Probability \& Statistics} (5--6 weeks) -- Requires linear algebra; can parallel with \#4
+    \item \textbf{Differential Equations} (4--5 weeks) -- Requires calculus
+    \item \textbf{3D Geometry} (4--5 weeks) -- Requires linear algebra; can start after \#1
+    \item \textbf{Optimization} (5--6 weeks) -- Requires calculus + linear algebra; best done last
+\end{enumerate}
+
+\textbf{Total time estimates:}
+\begin{itemize}
+    \item Full sequential path: 25--32 weeks (6--8 months)
+    \item Accelerated path (with undergraduate background): 12--16 weeks
+    \item Parallel study (if disciplined): 16--20 weeks
+\end{itemize}
+
+%------------------------------------------------------------------------------
+\subsection{How Math Flows into Robotics Skills}
+%------------------------------------------------------------------------------
+
+\begin{verbatim}
+      Linear Algebra          Multivariable Calculus
+            |                         |
+            v                         v
+    +-------+-------+         +-------+-------+
+    |               |         |               |
+    v               v         v               v
+Probability    3D Geometry   Diff Eqs    Optimization
+    |               |           |             |
+    +-------+-------+-----------+-------------+
+            |               |
+            v               v
+    State Estimation    Trajectory Opt (MPC)
+            |               |
+            +-------+-------+
+                    |
+                    v
+         Reinforcement Learning
+                    |
+                    v
+           Legged Locomotion
+\end{verbatim}
+
+\textbf{Key insight}: If you skip the math foundations, you'll hit walls when debugging algorithms that ``should work'' but don't. The math gives you the ability to reason about \textit{why} things fail.
+
+%==============================================================================
+\section{The Learning Roadmap}
+%==============================================================================
+
+%------------------------------------------------------------------------------
+\subsection{\textcolor{tier1}{TIER 1: FOUNDATIONAL (Deep Study Required)}}
+%------------------------------------------------------------------------------
+
+These are the ``non-negotiable'' skills that everything else builds on. You cannot shortcut these.
+
+%..............................................................................
+\subsubsection{1. State Estimation \& Sensor Fusion}
+
+\textbf{Depth: DEEP (3--4 months focused study)}
+
+\textbf{Why it matters:} Every legged robot needs to know where it is and how fast it's moving. Your codebase has zero state estimation---you're reading raw GPS. Real systems fuse GPS, IMU, wheel encoders, and visual odometry.
+
+\textbf{What to learn:}
+\begin{itemize}
+    \item Kalman Filter fundamentals (linear systems)
+    \item Extended Kalman Filter (EKF) for nonlinear systems
+    \item Unscented Kalman Filter (UKF) -- better for highly nonlinear
+    \item Factor graphs and batch optimization (GTSAM)
+    \item IMU preintegration
+\end{itemize}
+
+\textbf{Practical project:} Add an EKF to your AV platform that fuses GPS + IMU. You'll immediately see smoother position estimates and can detect GPS dropouts.
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Book: \textit{Probabilistic Robotics} by Thrun, Burgard, Fox (the bible)
+    \item Book: \textit{State Estimation for Robotics} by Tim Barfoot (more modern)
+    \item Course: Coursera ``State Estimation and Localization for Self-Driving Cars''
+    \item Library: FilterPy (Python), GTSAM (C++/Python)
+\end{itemize}
+
+\textbf{Connection to humanoids:} Legged robots have no wheel encoders. They must fuse IMU + kinematics + contact detection. Same math, harder problem.
+
+%..............................................................................
+\subsubsection{2. Trajectory Optimization \& MPC}
+
+\textbf{Depth: DEEP (3--4 months focused study)}
+
+\textbf{Why it matters:} Your Pure Pursuit + PID is reactive---it sees the path and follows. MPC is predictive---it plans trajectories that respect constraints (motor limits, stability, obstacles) over a horizon.
+
+\textbf{What to learn:}
+\begin{itemize}
+    \item Linear MPC formulation
+    \item Nonlinear MPC (harder but necessary for complex dynamics)
+    \item Quadratic Programs (QP) and solvers (OSQP, ECOS)
+    \item iLQR (iterative Linear Quadratic Regulator)
+    \item Whole-body control for humanoids
+\end{itemize}
+
+\textbf{Practical project:} Replace your Pure Pursuit with MPC for path tracking. You'll see better performance in sharp turns and can add speed-dependent constraints.
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Course: MIT 6.832 ``Underactuated Robotics'' (Russ Tedrake) -- FREE
+    \item Book: \textit{Predictive Control for Linear and Hybrid Systems} (Borrelli)
+    \item Library: CasADi, ACADOS, Drake, Crocoddyl
+    \item Tutorial: Machines in Motion Lab MPC resources
+\end{itemize}
+
+\textbf{Connection to humanoids:} MPC is how Atlas, Digit, and Optimus maintain balance. They're solving optimization problems at 100Hz+ to generate joint torques.
+
+%..............................................................................
+\subsubsection{3. Reinforcement Learning \& Sim2Real}
+
+\textbf{Depth: DEEP (4--6 months)}
+
+\textbf{Why it matters:} This is how legged locomotion is solved now. Every humanoid company (Figure, Agility, Tesla, Boston Dynamics) uses RL trained in simulation, transferred to real hardware.
+
+\textbf{What to learn:}
+\begin{itemize}
+    \item RL fundamentals (MDPs, policy gradients, value functions)
+    \item PPO (Proximal Policy Optimization) -- the workhorse algorithm
+    \item Domain randomization for sim2real
+    \item Reward shaping and curriculum learning
+    \item Sim2sim validation
+\end{itemize}
+
+\textbf{Practical project:} Train a simulated quadruped (Unitree Go1) to walk using Isaac Gym or MuJoCo. This is the on-ramp to humanoid RL.
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Course: UC Berkeley CS 285 ``Deep RL'' (Sergey Levine) -- FREE
+    \item Framework: Isaac Gym / Isaac Lab (NVIDIA) or MuJoCo + Brax
+    \item Code: \url{https://github.com/roboterax/humanoid-gym}
+    \item Code: \url{https://github.com/unitreerobotics/unitree_rl_gym}
+    \item Paper: ``Learning Agile Locomotion'' (ETH Zurich)
+\end{itemize}
+
+\textbf{Connection to humanoids:} This is THE skill for humanoid locomotion. Companies literally hire based on Isaac Gym experience.
+
+%------------------------------------------------------------------------------
+\subsection{\textcolor{tier2}{TIER 2: HIGH-LEVERAGE (Solid Understanding Required)}}
+%------------------------------------------------------------------------------
+
+These amplify your Tier 1 skills and are directly applicable to humanoid work.
+
+%..............................................................................
+\subsubsection{4. Rigid Body Dynamics \& Contact Mechanics}
+
+\textbf{Depth: MEDIUM-DEEP (2--3 months)}
+
+\textbf{Why it matters:} Humanoids are complex multi-body systems. You need to understand Lagrangian/Hamiltonian mechanics, constraint forces, and how contact works.
+
+\textbf{What to learn:}
+\begin{itemize}
+    \item Spatial vector algebra (Featherstone notation)
+    \item Forward/inverse dynamics
+    \item Contact modeling (compliant vs rigid)
+    \item Friction cones and contact wrenches
+\end{itemize}
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Book: \textit{Rigid Body Dynamics Algorithms} by Roy Featherstone
+    \item Library: Pinocchio (fast dynamics library)
+    \item MIT 6.832 covers this well
+\end{itemize}
+
+\textbf{Connection to your work:} Your bicycle model is a start, but humanoids have 30+ DOF with closed kinematic chains.
+
+%..............................................................................
+\subsubsection{5. Computer Vision for Robotics}
+
+\textbf{Depth: MEDIUM (2--3 months)}
+
+\textbf{Why it matters:} You have YOLOPv2 in your codebase but it's not integrated. Humanoids need vision for manipulation, navigation, and human interaction.
+
+\textbf{What to learn:}
+\begin{itemize}
+    \item Visual odometry / Visual SLAM
+    \item Depth estimation and 3D reconstruction
+    \item Object detection and pose estimation
+    \item Foundation models (CLIP, SAM, DINO)
+\end{itemize}
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Course: University of Bonn ``Photogrammetry'' (Cyrill Stachniss)
+    \item Library: OpenCV, ORB-SLAM3, DROID-SLAM
+    \item Modern: Use foundation models via API when possible
+\end{itemize}
+
+\textbf{Connection to humanoids:} Figure AI uses vision extensively for manipulation. Not as critical as locomotion skills but important.
+
+%..............................................................................
+\subsubsection{6. Real-Time Systems}
+
+\textbf{Depth: MEDIUM (1--2 months)}
+
+\textbf{Why it matters:} Your Python code runs at ``soft real-time'' (best effort). Production humanoids need hard guarantees---1kHz control loops that never miss a deadline.
+
+\textbf{What to learn:}
+\begin{itemize}
+    \item PREEMPT\_RT Linux
+    \item Real-time priorities and scheduling
+    \item Lock-free programming patterns
+    \item ROS2 real-time considerations
+\end{itemize}
+
+\textbf{Resources:}
+\begin{itemize}
+    \item Book: \textit{Real-Time Systems} by Jane Liu
+    \item Practical: Run your control loop at 1kHz on PREEMPT\_RT Linux
+\end{itemize}
+
+\textbf{Connection to your work:} Your 20Hz control loop is fine for slow AV navigation. Humanoid balance requires 500Hz--1kHz.
+
+%------------------------------------------------------------------------------
+\subsection{\textcolor{tier3}{TIER 3: NICE-TO-HAVE (Learn As Needed)}}
+%------------------------------------------------------------------------------
+
+These are valuable but can be learned on-demand or delegated to LLMs for assistance.
+
+\subsubsection{7. ROS2 \& Robot Middleware}
+\textbf{Depth: LIGHT (learn when needed)} \\
+Industry standard, but you can learn it when you join a team that uses it. Your current modular architecture is actually cleaner for research.
+
+\subsubsection{8. CAD \& Mechanical Design}
+\textbf{Depth: LIGHT} \\
+As a software/controls person, you'll collaborate with mechanical engineers. Basic Fusion360/SolidWorks literacy helps communication.
+
+\subsubsection{9. PCB Design \& Embedded Systems}
+\textbf{Depth: LIGHT (unless specializing)} \\
+Your Teensy integration is solid. Deeper embedded work is a separate specialization.
+
+\subsubsection{10. Safety Systems \& Standards}
+\textbf{Depth: LEARN ON JOB} \\
+ISO 13482 (service robots), functional safety---important but company-specific.
+
+%==============================================================================
+\section{Manipulation: The Other Half of Humanoids}
+%==============================================================================
+
+Locomotion is only half the problem. Manipulation (dexterous hands, grasping, tool use) is equally important but uses different techniques.
+
+\textbf{Key skills:}
+\begin{itemize}
+    \item Grasp planning and contact reasoning
+    \item Imitation learning from human demonstrations
+    \item Tactile sensing and force control
+    \item Bimanual coordination
+\end{itemize}
+
+\textbf{Recommended approach:} Focus on locomotion first (Tier 1), then pivot to manipulation. The RL skills transfer directly.
+
+%==============================================================================
+\section{Suggested Timeline (24--32 months)}
+%==============================================================================
+
+This timeline includes math foundations as a prerequisite phase. If you already have strong undergraduate-level math, you can compress or skip the first phase.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Months} & \textbf{Focus Area} & \textbf{Practical Application} \\
+\midrule
+\multicolumn{3}{l}{\textit{Phase 0: Mathematical Foundations}} \\
+\addlinespace
+$-$6 to $-$4 & Linear Algebra + Calculus & MIT 18.06, 18.02, implement from scratch \\
+$-$4 to $-$2 & Probability + Diff Eqs & Bayesian inference, numerical integration \\
+$-$2 to 0 & 3D Geometry + Optimization & SE(3) transforms, convex optimization \\
+\addlinespace
+\multicolumn{3}{l}{\textit{Phase 1: Robotics Core}} \\
+\addlinespace
+1--4 & State Estimation (EKF/UKF) & Add sensor fusion to your AV \\
+4--8 & Trajectory Optimization (MPC) & Replace Pure Pursuit with MPC \\
+8--14 & Reinforcement Learning \& Sim2Real & Train quadruped in Isaac Gym \\
+14--18 & Dynamics + Real-time & Pinocchio, PREEMPT\_RT \\
+18--24 & First humanoid project & Unitree H1 simulation or custom build \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Note:} The ``negative months'' in Phase 0 indicate this work should be done \textit{before} starting the robotics curriculum. If you're strong in math, start at Month 1. If you need the full math foundation, add 4--6 months to the timeline.
+
+%==============================================================================
+\section{Recommended Hardware Path}
+%==============================================================================
+
+\begin{enumerate}
+    \item \textbf{Keep your AV platform} -- It's a great testbed for state estimation and MPC
+    \item \textbf{Get a Unitree Go1/Go2} (\$1,600--2,700) -- Industry standard for learning legged locomotion
+    \item \textbf{Unitree H1} (when ready) -- Most accessible humanoid platform
+    \item \textbf{Or build custom} -- Many labs build small bipeds for research
+\end{enumerate}
+
+%==============================================================================
+\section{How These Skills Connect}
+%==============================================================================
+
+\begin{verbatim}
+State Estimation <---> Trajectory Optimization
+       |                        |
+       +-----> Reinforcement Learning <----+
+                      |
+            Sim2Real Transfer
+                      |
+             Legged Locomotion
+                      |
+             Humanoid Control
+                      |
+               Manipulation
+\end{verbatim}
+
+Every Tier 1 skill feeds into the others:
+\begin{itemize}
+    \item State estimation gives you belief state for MPC
+    \item MPC teaches you constraint handling for reward design
+    \item RL policies need dynamics models for sim2real
+\end{itemize}
+
+%==============================================================================
+\section{Final Thoughts}
+%==============================================================================
+
+\subsection{What Makes You Competitive}
+
+\begin{enumerate}
+    \item You've shipped real hardware (rare among students)
+    \item Your software architecture is production-grade
+    \item You understand the full sense-plan-act pipeline
+\end{enumerate}
+
+\subsection{What You Need}
+
+\begin{enumerate}
+    \item Mathematical depth in optimization and estimation
+    \item RL/sim2real for modern locomotion
+    \item Experience with legged platforms
+\end{enumerate}
+
+\subsection{Career Positioning}
+
+Companies like Figure AI, Tesla Optimus, Agility, and Apptronik hire from:
+\begin{itemize}
+    \item Boston Dynamics alumni
+    \item ETH Zurich / MIT / CMU robotics labs
+    \item Self-taught engineers with Isaac Gym experience and real robot demos
+\end{itemize}
+
+\textbf{Your path:} Build a portfolio of simulated + real legged robot demos. A YouTube video of a quadruped you trained from scratch in Isaac Gym is worth more than most resumes.
+
+%==============================================================================
+\section{References}
+%==============================================================================
+
+\begin{enumerate}
+    \item 10 Must-Have Skills for Robotics Engineers 2026: \url{https://www.edstellar.com/blog/robotics-engineers-skills}
+    \item Learning-based Legged Locomotion (IJRR): \url{https://journals.sagepub.com/doi/10.1177/02783649241312698}
+    \item Humanoid-Gym: Zero-Shot Sim2Real: \url{https://github.com/roboterax/humanoid-gym}
+    \item State Estimation for Robotics: \url{https://www.numberanalytics.com/blog/state-estimation-in-robotics-ultimate-guide}
+    \item MPC vs PID for High-Speed Robots: \url{https://eureka.patsnap.com/article/pid-vs-model-predictive-control-mpc-which-is-better-for-high-speed-robots}
+    \item LLMs in Robotics (Georgia Tech): \url{https://github.com/GT-RIPL/Awesome-LLM-Robotics}
+    \item Figure vs Tesla Humanoid Analysis: \url{https://www.diamandis.com/blog/abundance-43-figure-vs-tesla}
+    \item Dexterous Manipulation Survey: \url{https://www.frontiersin.org/journals/robotics-and-ai/articles/10.3389/frobt.2025.1682437/full}
+\end{enumerate}
+
+\end{document}

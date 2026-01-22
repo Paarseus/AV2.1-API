@@ -27,5 +27,5 @@ costmap:
 
 # Visualization
 visualization:
-  update_hz: 10       # Refresh rate
+  update_hz: 30       # Refresh rate
   colormap: "RdYlGn_r"  # matplotlib colormap

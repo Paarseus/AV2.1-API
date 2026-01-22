@@ -26,7 +26,8 @@ Sensors → Perception → Planning → Control → Actuators
 ### Entry Points
 
 - **`runner.py`** - Main autonomous controller: GPS waypoint following with Pure Pursuit, control in background thread, visualization in main thread
-- **`runner_dwa.py`** - DWA-based obstacle avoidance mode
+- **`runner_dwa.py`** - DWA-based obstacle avoidance mode (synthetic obstacles)
+- **`runner_dwa_lidar.py`** - DWA with live Velodyne LIDAR obstacle detection, ego-centric frame
 - **`examples/`** - Standalone demos (DWA, LIDAR BEV, costmap, IPM calibration, manual control)
 
 ## Commands
@@ -34,8 +35,9 @@ Sensors → Perception → Planning → Control → Actuators
 ### Running the Vehicle
 
 ```bash
-python runner.py              # Main autonomous mode
-python runner_dwa.py          # DWA obstacle avoidance mode
+python runner.py              # Main autonomous mode (Pure Pursuit + GPS)
+python runner_dwa.py          # DWA obstacle avoidance (synthetic)
+python runner_dwa_lidar.py    # DWA with live LIDAR
 python examples/manual_control.py  # Manual keyboard control
 ```
 
@@ -48,6 +50,12 @@ python tests/test_bev_lidar_synthetic.py
 python tests/test_multilayer_synthetic.py
 python tests/test_straight_line_heading.py
 python tests/example_mti_receive_data.py  # Xsens sensor validation
+
+# LIDAR integration tests (in order)
+python tests/lidar/00_basic_test.py       # Velodyne connection check
+python tests/lidar/01_raw_pointcloud.py   # Raw point cloud visualization
+python tests/lidar/02_occupancy_grid.py   # Grid mapping from LIDAR
+python tests/lidar/03_costmap.py          # Costmap with inflation
 ```
 
 ### Running Examples
@@ -122,18 +130,18 @@ P               - Request state (returns JSON)
 
 | Module | Key Classes | Purpose |
 |--------|-------------|---------|
-| `sensors/` | `XsensReceiver` | GPS/IMU via xsensdeviceapi SDK |
+| `sensors/` | `XsensReceiver`, `VelodyneLIDAR` | GPS/IMU via xsensdeviceapi SDK, LIDAR via UDP |
 | `perception/` | `OccupancyGrid2D`, `Costmap` | Probabilistic grid mapping |
 | `planning/` | `Navigator`, `DWA`, `AckermannDWA`, `AckermannDWACostmap` | Route planning, local planners |
-| `control/` | `PurePursuitController`, `AckermannVehicle` | Path tracking, vehicle model |
+| `control/` | `PurePursuitController`, `AckermannVehicle`, `PID` | Path tracking, vehicle model, speed control |
 | `actuators/` | `VehicleActuator`, `VehicleActuatorUDP` | Serial/Ethernet to Teensy |
-| `utils/` | `load_config`, `ControlLogger` | Config loader, data logging |
+| `utils/` | `load_config`, `ControlLogger`, `VibrationLogger` | Config loader, data logging |
 
 ## Dependencies
 
 Core: `numpy`, `scipy`, `matplotlib`, `opencv-python`, `pyyaml`
 Planning: `osmnx`, `networkx`, `pyproj`, `shapely`
-Sensors: `xsensdeviceapi`, `pyrealsense2` (optional)
+Sensors: `xsensdeviceapi`, `velodyne-decoder`, `pyrealsense2` (optional)
 Visualization: `open3d` (optional)
 WebUI: `fastapi`, `uvicorn`, `websockets`
 

@@ -1,0 +1,294 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancybox}
+\usepackage{tcolorbox}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    keepspaces=true,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single
+}
+\lstset{style=mystyle}
+
+\title{\textbf{Lab Demo Plan}\\[0.5em]\large Ulsan Student Visit --- January 22, 2026}
+\author{Autonomous Vehicle Laboratory\\Cal Poly Pomona}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Visit Information}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Group} & \textbf{Time} & \textbf{Lead} \\
+\midrule
+Group B (30 students) & 1:00pm -- 2:20pm & Yvonne Chen \\
+Group A (31 students) & 2:30pm -- 3:50pm & James Wu \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Location:} Electric Vehicle Lab, Building 9, Room 101\\
+\textbf{Duration:} 80 minutes per group
+
+\section*{Hardware Status}
+\begin{itemize}[noitemsep]
+    \item Vehicle drives manually
+    \item GPS/IMU working (individually)
+    \item LIDAR working (individually)
+    \item Camera working
+    \item Sim chair available for teleoperation
+\end{itemize}
+
+\hrule
+\vspace{1em}
+
+\section{Schedule Overview (80 min)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{clc}
+\toprule
+\textbf{Time} & \textbf{Activity} & \textbf{Duration} \\
+\midrule
+0:00 & Welcome \& Research Overview & 12 min \\
+0:12 & Algorithm Visualization Demos & 20 min \\
+0:32 & Live Sensor Demos & 15 min \\
+0:47 & Hands-On Vehicle Interaction & 25 min \\
+1:12 & Q\&A and Discussion & 8 min \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+
+\section{Welcome \& Research Overview (12 min)}
+
+\subsection*{Introduction (5 min)}
+\begin{itemize}[noitemsep]
+    \item Welcome to the Autonomous Vehicle Laboratory
+    \item Our research: Full-scale AV testbed for GPS-guided autonomous navigation
+    \item Introduce the \textbf{Sense-Plan-Control-Act} pipeline
+\end{itemize}
+
+\subsection*{Architecture Diagram}
+\begin{lstlisting}
+Sensors -> Perception -> Planning -> Control -> Actuators
+   |           |            |           |           |
+GPS/IMU    occupancy    navigator  pure_pursuit  vehicle
+LIDAR      costmap      DWA        PID           (CAN bus)
+camera     BEV          path plan  steering
+\end{lstlisting}
+
+\subsection*{Research Challenges (7 min)}
+Engage students with questions:
+\begin{enumerate}[noitemsep]
+    \item ``What sensors would you use to localize a car?''
+    \item ``Why can't we just use GPS?'' (tunnels, urban canyons, accuracy)
+    \item ``How do you avoid obstacles in real-time?''
+    \item ``What makes autonomous driving hard?''
+\end{enumerate}
+
+\section{Algorithm Visualization Demos (20 min)}
+
+\subsection{Demo A: Dynamic Window Approach (8 min)}
+\begin{lstlisting}[language=bash]
+python examples/ackermann_dwa_synthetic.py
+\end{lstlisting}
+
+\textbf{What students see:} Animated vehicle navigating around obstacles
+
+\textbf{Key points:}
+\begin{itemize}[noitemsep]
+    \item DWA samples hundreds of possible trajectories
+    \item Ackermann steering = car-like constraints
+    \item Cost function: reach goal vs avoid obstacles vs prefer speed
+    \item Real-time: must compute in $<$50ms
+\end{itemize}
+
+\textbf{Engagement:} ``Predict which path it will choose!''
+
+\subsection{Demo B: Occupancy Grid \& Costmap (7 min)}
+\begin{lstlisting}[language=bash]
+python examples/costmap_synthetic.py
+\end{lstlisting}
+
+\textbf{What students see:} Side-by-side probability grid vs inflated costmap
+
+\textbf{Key points:}
+\begin{itemize}[noitemsep]
+    \item Occupancy grid: each cell = probability of obstacle (0.0 to 1.0)
+    \item Bayesian updates: sensor readings update beliefs
+    \item Inflation: add safety margin = robot radius + buffer
+\end{itemize}
+
+\subsection{Demo C: 3D Sensor Fusion (5 min)}
+\begin{lstlisting}[language=bash]
+python tests/test_bev_lidar_synthetic.py
+\end{lstlisting}
+
+\textbf{What students see:} Interactive 3D view -- BEV camera + LIDAR points
+
+\textbf{Hands-on:} Let a student rotate/zoom the 3D view
+
+\section{Live Sensor Demos (15 min)}
+
+\subsection{Demo D: LIDAR Point Cloud (7 min)}
+\begin{lstlisting}[language=bash]
+python tests/lidar/01_raw_pointcloud.py
+\end{lstlisting}
+
+\textbf{What students see:} Real-time 3D point cloud from Velodyne LIDAR
+
+\textbf{Key points:}
+\begin{itemize}[noitemsep]
+    \item Velodyne spins 360° at 10--20 Hz
+    \item Each point = (x, y, z, intensity)
+    \item \textbf{Demo:} Walk in front of LIDAR, watch yourself appear as points
+\end{itemize}
+
+\subsection{Demo E: GPS/IMU Tracking (5 min)}
+\begin{lstlisting}[language=bash]
+python tests/example_mti_receive_data.py
+\end{lstlisting}
+
+\textbf{What students see:} Real-time position, heading, velocity from Xsens
+
+\textbf{Key points:}
+\begin{itemize}[noitemsep]
+    \item RTK GPS: $\sim$2cm accuracy (vs $\sim$3m for phone GPS)
+    \item IMU: 100Hz attitude updates
+\end{itemize}
+
+\subsection{Demo F: Camera Perception (3 min)}
+\begin{lstlisting}[language=bash]
+python examples/perception_demo.py --camera rgb --camera-id 0 --visualizer 2d
+\end{lstlisting}
+
+\textbf{What students see:} Live camera with BEV transformation
+
+\section{Hands-On Vehicle Interaction (25 min)}
+
+\subsection{Demo G: Sim Chair Teleoperation (15 min)}
+
+\textbf{Student participation:}
+\begin{itemize}[noitemsep]
+    \item Let 3--4 students try driving via sim chair
+    \item Set up simple course with cones
+    \item ``Who can navigate the course smoothest?''
+\end{itemize}
+
+\subsection{Demo H: WebUI Phone Control (10 min)}
+\begin{lstlisting}[language=bash]
+cd webui && python3 server.py
+\end{lstlisting}
+
+\textbf{Features to show:}
+\begin{itemize}[noitemsep]
+    \item Touch joystick (throttle + steering gauges)
+    \item Voice commands: ``go'', ``stop'', ``left'', ``right''
+    \item Emergency E-STOP button
+\end{itemize}
+
+\textbf{Student participation:} Let 2--3 students try voice commands
+
+\section{Q\&A and Discussion (8 min)}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{5cm}p{8cm}}
+\toprule
+\textbf{Question} & \textbf{Answer} \\
+\midrule
+``What programming languages?'' & Python for algorithms, C++ for Teensy firmware \\
+``How accurate is GPS?'' & RTK = $\sim$2cm, Standard = $\sim$3m \\
+``How fast can it go?'' & Max 2.5 m/s, limited to 1 m/s for safety \\
+``Hardest part of AV?'' & Handling uncertainty, edge cases, real-time safety \\
+``Can it work in rain?'' & LIDAR yes, camera struggles, GPS works \\
+``Career paths in AV?'' & Software, perception, controls, systems engineering \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+
+\section*{Pre-Visit Checklist}
+
+\subsection*{Morning Setup}
+\begin{itemize}
+    \item[$\square$] Charge vehicle batteries
+    \item[$\square$] Power on Velodyne LIDAR, verify UDP streaming
+    \item[$\square$] Power on Xsens GPS/IMU, check fix quality
+    \item[$\square$] Connect sim chair, test teleoperation
+    \item[$\square$] Test WebUI on phone
+    \item[$\square$] Run each synthetic demo once
+    \item[$\square$] Set up projector and test display
+    \item[$\square$] Clear 5m x 5m space for vehicle movement
+    \item[$\square$] Position traffic cones for driving course
+    \item[$\square$] E-STOP button accessible and tested
+\end{itemize}
+
+\subsection*{Software Verification}
+\begin{lstlisting}[language=bash]
+# Run verification script
+python lab_demo/verify_demos.py
+
+# Or test manually:
+python examples/ackermann_dwa_synthetic.py
+python examples/costmap_synthetic.py
+python tests/test_bev_lidar_synthetic.py
+python tests/lidar/00_basic_test.py
+python tests/example_mti_receive_data.py
+\end{lstlisting}
+
+\section*{Backup Plans}
+
+\textbf{If LIDAR fails:} Skip Demo D, extend algorithm demos
+
+\textbf{If vehicle won't drive:} Focus on sim chair as ``the interface''
+
+\textbf{If projector fails:} Gather students around laptop screens
+
+\textbf{If running behind:} Cut Demo F (3 min), shorten Q\&A to 5 min
+
+\section*{Quick Command Reference}
+
+\begin{lstlisting}[language=bash]
+# Algorithm Demos (No Hardware)
+python examples/ackermann_dwa_synthetic.py    # Demo A
+python examples/costmap_synthetic.py          # Demo B
+python tests/test_bev_lidar_synthetic.py      # Demo C
+
+# Live Sensor Demos (Hardware Required)
+python tests/lidar/01_raw_pointcloud.py       # Demo D
+python tests/example_mti_receive_data.py      # Demo E
+python examples/perception_demo.py --camera rgb --camera-id 0  # Demo F
+
+# Vehicle Control
+cd webui && python3 server.py                 # Demo H
+\end{lstlisting}
+
+\end{document}

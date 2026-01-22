@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+websockets
+faster-whisper
+python-multipart
+aiortc>=1.6.0
+av>=10.0.0
+opencv-python>=4.8.0
+pyrealsense2>=2.50.0
+numpy

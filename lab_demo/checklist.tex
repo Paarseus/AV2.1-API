@@ -1,0 +1,139 @@
+\documentclass[10pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{xcolor}
+\usepackage{fancybox}
+
+\pagestyle{empty}
+
+\title{\textbf{Pre-Visit Checklist}\\Ulsan Student Visit --- January 22, 2026}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{multicols}{2}
+
+\section*{Morning Setup}
+
+\subsection*{Hardware}
+\begin{itemize}[noitemsep,leftmargin=*]
+    \item[$\square$] Charge vehicle batteries
+    \item[$\square$] Power on Velodyne LIDAR
+    \item[$\square$] Verify LIDAR UDP streaming
+    \item[$\square$] Power on Xsens GPS/IMU
+    \item[$\square$] Check GPS fix quality
+    \item[$\square$] Connect sim chair
+    \item[$\square$] Test teleoperation
+    \item[$\square$] E-STOP button accessible
+    \item[$\square$] E-STOP button tested
+\end{itemize}
+
+\subsection*{Room Setup}
+\begin{itemize}[noitemsep,leftmargin=*]
+    \item[$\square$] Set up projector
+    \item[$\square$] Test projector display
+    \item[$\square$] Clear 5m x 5m space
+    \item[$\square$] Position traffic cones
+    \item[$\square$] Arrange student seating
+\end{itemize}
+
+\subsection*{Software}
+\begin{itemize}[noitemsep,leftmargin=*]
+    \item[$\square$] Run verification script:\\
+          \texttt{python lab\_demo/verify\_demos.py}
+    \item[$\square$] Test Demo A (DWA)
+    \item[$\square$] Test Demo B (Costmap)
+    \item[$\square$] Test Demo C (3D view)
+    \item[$\square$] Test WebUI on phone
+\end{itemize}
+
+\columnbreak
+
+\section*{Schedule}
+
+\begin{tabular}{ll}
+\textbf{1:00pm} & Group B arrives (30 students) \\
+\textbf{2:20pm} & Group B departs \\
+\textbf{2:30pm} & Group A arrives (31 students) \\
+\textbf{3:50pm} & Group A departs \\
+\end{tabular}
+
+\vspace{1em}
+
+\section*{Demo Timing (80 min)}
+
+\begin{tabular}{rlc}
+\textbf{Time} & \textbf{Activity} & \textbf{Min} \\
+\midrule
+0:00 & Welcome \& Overview & 12 \\
+0:12 & Demo A: DWA & 8 \\
+0:20 & Demo B: Costmap & 7 \\
+0:27 & Demo C: 3D Fusion & 5 \\
+0:32 & Demo D: LIDAR Live & 7 \\
+0:39 & Demo E: GPS/IMU & 5 \\
+0:44 & Demo F: Camera & 3 \\
+0:47 & Sim Chair Driving & 15 \\
+1:02 & WebUI Phone Control & 10 \\
+1:12 & Q\&A & 8 \\
+\end{tabular}
+
+\vspace{1em}
+
+\section*{Quick Commands}
+
+\footnotesize
+\texttt{python lab\_demo/demo\_runner.py}
+
+\vspace{0.5em}
+Or run individually:
+\begin{itemize}[noitemsep,leftmargin=*]
+    \item[A] \texttt{python examples/ackermann\_dwa\_synthetic.py}
+    \item[B] \texttt{python examples/costmap\_synthetic.py}
+    \item[C] \texttt{python tests/test\_bev\_lidar\_synthetic.py}
+    \item[D] \texttt{python tests/lidar/01\_raw\_pointcloud.py}
+    \item[E] \texttt{python tests/example\_mti\_receive\_data.py}
+    \item[H] \texttt{cd webui \&\& python3 server.py}
+\end{itemize}
+
+\end{multicols}
+
+\vspace{1em}
+\hrule
+\vspace{0.5em}
+
+\begin{multicols}{2}
+
+\section*{Backup Plans}
+
+\textbf{LIDAR fails:} Skip Demo D, extend algorithm demos
+
+\textbf{Vehicle won't drive:} Focus on sim chair interface, show WebUI controlling state
+
+\textbf{Projector fails:} Gather around laptops, walking tour of hardware
+
+\textbf{Running behind:} Cut Demo F (3 min), shorten Q\&A to 5 min
+
+\columnbreak
+
+\section*{Emergency Contacts}
+
+\begin{tabular}{ll}
+Lab Phone: & \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ \\
+Faculty:   & \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ \\
+IT Support: & \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ \\
+\end{tabular}
+
+\vspace{1em}
+
+\textbf{Group Leads:}\\
+Group A: James Wu\\
+Group B: Yvonne Chen
+
+\end{multicols}
+
+\end{document}

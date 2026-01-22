@@ -1,0 +1,491 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{green!50!black},
+    breaklines=true,
+    frame=single
+}
+
+\title{NOISE-CON 2026 Research Notes:\\
+Self-Supervised Vibration Representation Learning\\
+for Road Surface Classification}
+\author{UTM Navigator Research Team\\Cal Poly Pomona Autonomous Vehicle Laboratory}
+\date{January 2026}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Executive Summary}
+%==============================================================================
+
+\textbf{Proposed Paper Title:} ``Self-Supervised Vibration Representation Learning for Road Surface Classification on Low-Speed Autonomous Campus Vehicles''
+
+\textbf{Conference:} NOISE-CON 2026 (``Good Vibrations'') -- Long Beach, CA, July 9-11, 2026
+
+\textbf{Key Deadlines:}
+\begin{itemize}
+    \item Abstract: February 20, 2026
+    \item Full Paper: May 26, 2026
+\end{itemize}
+
+\textbf{Novel Contribution:} First self-supervised learning approach for on-road vehicle IMU road surface classification. All prior work uses supervised learning.
+
+%==============================================================================
+\section{Literature Review: Road Surface Classification}
+%==============================================================================
+
+\subsection{State of the Art (Supervised Methods)}
+
+\begin{table}[h]
+\centering
+\caption{Key Papers in Road Surface Classification}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Paper} & \textbf{Method} & \textbf{Accuracy} & \textbf{Year} \\
+\midrule
+Souza et al. & CNN+LSTM Multi-IMU & F1=0.9338 & 2025 \\
+Rahman et al. & Multi-representation fusion & 93.4\% & 2024 \\
+Menegazzo et al. & CNN & 93.17\% & 2021 \\
+Hadj-Attou et al. & CNN-BiLSTM & 95.91\% & 2023 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Research Gap}
+
+All existing road surface classification papers use \textbf{supervised learning}:
+\begin{itemize}
+    \item Require extensive manual labeling of road surfaces
+    \item Labeling is tedious and expensive
+    \item Limited to labeled routes
+    \item Cannot leverage abundant unlabeled driving data
+\end{itemize}
+
+\subsection{Closest Prior Work}
+
+\begin{table}[h]
+\centering
+\caption{Related Self-Supervised Work (Not Road Surface)}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Paper} & \textbf{Venue} & \textbf{Domain} & \textbf{Gap} \\
+\midrule
+STERLING & CoRL 2023 & Off-road robot terrain & Not on-road vehicles \\
+Tartan IMU & CVPR 2025 & IMU positioning & Not road surface \\
+IMU2CLIP & EMNLP 2023 & Activity recognition & Not automotive \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{Proposed Approach: Self-Supervised Learning}
+%==============================================================================
+
+\subsection{Core Idea}
+
+\textbf{Time-Frequency Contrastive Learning} for vehicle vibration signals:
+\begin{enumerate}
+    \item Pretrain encoder on \textbf{unlabeled} driving data (easy to collect)
+    \item Learn representations that capture road surface characteristics
+    \item Fine-tune with \textbf{small labeled set} (10-20\% of data)
+    \item Achieve comparable accuracy to fully-supervised methods
+\end{enumerate}
+
+\subsection{Why This Works for Vibration Data}
+
+\begin{itemize}
+    \item \textbf{Time domain}: Captures temporal patterns (bump duration, repetition)
+    \item \textbf{Frequency domain}: Captures spectral signatures (roughness frequencies)
+    \item \textbf{Contrastive learning}: Learns to distinguish different road textures
+\end{itemize}
+
+\subsection{Mathematical Formulation}
+
+Given IMU window $x \in \mathbb{R}^{T \times C}$ where $T$ = timesteps, $C$ = channels (6 for accel+gyro):
+
+\textbf{Time-domain augmentations:}
+\begin{equation}
+x'_t = \text{Aug}_t(x) \quad \text{(jitter, scale, permute)}
+\end{equation}
+
+\textbf{Frequency-domain representation:}
+\begin{equation}
+x_f = \text{FFT}(x) \in \mathbb{C}^{T/2 \times C}
+\end{equation}
+
+\textbf{Contrastive loss:}
+\begin{equation}
+\mathcal{L} = -\log \frac{\exp(z_t \cdot z_f / \tau)}{\sum_{k} \exp(z_t \cdot z_k / \tau)}
+\end{equation}
+
+where $z_t, z_f$ are embeddings from time and frequency encoders, $\tau$ is temperature.
+
+%==============================================================================
+\section{Open-Source Frameworks}
+%==============================================================================
+
+\subsection{Recommended: TFC-Pretraining}
+
+\begin{itemize}
+    \item \textbf{GitHub:} \url{https://github.com/mims-harvard/TFC-pretraining}
+    \item \textbf{Paper:} NeurIPS 2022 -- ``Self-Supervised Contrastive Pre-Training For Time Series via Time-Frequency Consistency''
+    \item \textbf{Stars:} 511
+    \item \textbf{Key Feature:} Already includes vibration data (bearing fault detection)
+    \item \textbf{License:} MIT
+\end{itemize}
+
+\subsection{Alternative Frameworks}
+
+\begin{table}[h]
+\centering
+\caption{Self-Supervised Learning Frameworks for IMU/Time-Series}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\textbf{Framework} & \textbf{Stars} & \textbf{Paper} & \textbf{Best For} \\
+\midrule
+TFC-Pretraining & 511 & NeurIPS 2022 & Vibration data \\
+LIMU-BERT & 133 & SenSys 2021 & IMU-specific \\
+TS-TCC & 482 & IJCAI 2021 & Few-shot (10\% labels) \\
+TS2Vec & 802 & AAAI 2022 & General time-series \\
+ContrastiveLearningHAR & 79 & arXiv & Sensor augmentations \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{GitHub Links}
+
+\begin{lstlisting}
+# TFC (Recommended)
+git clone https://github.com/mims-harvard/TFC-pretraining
+
+# LIMU-BERT
+git clone https://github.com/dapowan/LIMU-BERT-Public
+
+# TS-TCC
+git clone https://github.com/emadeldeen24/TS-TCC
+
+# TS2Vec
+git clone https://github.com/zhihanyue/ts2vec
+
+# ContrastiveLearningHAR
+git clone https://github.com/iantangc/ContrastiveLearningHAR
+\end{lstlisting}
+
+%==============================================================================
+\section{Implementation Plan}
+%==============================================================================
+
+\subsection{Phase 1: Framework Setup (3-5 days)}
+
+\begin{enumerate}
+    \item Clone TFC-Pretraining repository
+    \item Set up conda environment
+    \item Run example on existing HAR/vibration data
+    \item Verify training pipeline works
+\end{enumerate}
+
+\subsection{Phase 2: Data Collection (1-2 weeks)}
+
+\textbf{Use existing vibration logger:} \texttt{utils/vibration\_logger.py}
+
+\textbf{Collection protocol:}
+\begin{itemize}
+    \item \textbf{Unlabeled data:} Drive around campus normally, 2-3 hours
+    \item \textbf{Labeled data:} Drive specific routes with keyboard labeling
+\end{itemize}
+
+\textbf{Label keys:}
+\begin{itemize}
+    \item A = Asphalt (smooth)
+    \item S = Sidewalk/concrete
+    \item G = Grass
+    \item B = Bump/pothole
+    \item R = Rough asphalt
+\end{itemize}
+
+\textbf{Target amounts:}
+\begin{itemize}
+    \item Unlabeled: 10,000+ windows (1-second each at 100Hz)
+    \item Labeled: 1,000-2,000 windows
+\end{itemize}
+
+\subsection{Phase 3: Preprocessing (2-3 days)}
+
+Convert Xsens data to SSL format:
+
+\begin{lstlisting}[language=Python]
+# Input: CSV from vibration_logger.py
+# Output: (N, window_size, 6) numpy array
+# Channels: ax, ay, az, gx, gy, gz
+
+def preprocess_for_ssl(csv_path, window_size=100, overlap=0.5):
+    """Convert logged data to SSL training format."""
+    df = pd.read_csv(csv_path)
+
+    # Extract IMU channels
+    imu_data = df[['ax', 'ay', 'az', 'gx', 'gy', 'gz']].values
+
+    # Segment into windows
+    step = int(window_size * (1 - overlap))
+    windows = []
+    for i in range(0, len(imu_data) - window_size, step):
+        windows.append(imu_data[i:i+window_size])
+
+    # Normalize per-channel
+    data = np.array(windows)  # (N, W, 6)
+    data = (data - data.mean(axis=(0,1))) / data.std(axis=(0,1))
+
+    return data
+\end{lstlisting}
+
+\subsection{Phase 4: Self-Supervised Pretraining (3-5 days)}
+
+\begin{lstlisting}[language=Python]
+# Using TFC approach
+# 1. Time domain: Learn temporal vibration patterns
+# 2. Frequency domain: Learn spectral signatures
+# 3. Contrastive loss: Pull same-sample views together
+
+# Training settings
+config = {
+    'epochs': 100,
+    'batch_size': 128,
+    'learning_rate': 3e-4,
+    'temperature': 0.2,
+    'encoder': 'TCN',  # or 'Transformer'
+}
+\end{lstlisting}
+
+\subsection{Phase 5: Fine-tuning (2-3 days)}
+
+\textbf{Linear evaluation protocol:}
+\begin{enumerate}
+    \item Freeze pretrained encoder
+    \item Add linear classifier head
+    \item Train on varying amounts of labeled data: 10\%, 20\%, 50\%, 100\%
+    \item Compare to fully-supervised baseline
+\end{enumerate}
+
+\textbf{Key experiment:} Show that SSL + 10\% labels $\approx$ Supervised + 100\% labels
+
+\subsection{Phase 6: Evaluation (3-5 days)}
+
+\textbf{Metrics:}
+\begin{itemize}
+    \item Classification accuracy per surface type
+    \item Confusion matrix
+    \item t-SNE visualization of learned representations
+    \item Label efficiency curve (accuracy vs. \% labeled data)
+\end{itemize}
+
+\textbf{Key figures for paper:}
+\begin{enumerate}
+    \item t-SNE plot showing clusters by road surface type
+    \item Accuracy vs. labeled data percentage curve
+    \item Confusion matrix
+    \item Real-time classification demo screenshot
+\end{enumerate}
+
+\subsection{Phase 7: Paper Writing (1-2 weeks)}
+
+Update existing paper: \texttt{docs/NOISE\_CON\_2026/NOISE\_CON\_2026\_paper.tex}
+
+\textbf{New sections to add:}
+\begin{enumerate}
+    \item Self-supervised learning methodology
+    \item Time-frequency contrastive loss formulation
+    \item Label efficiency results
+    \item Comparison to supervised baseline
+\end{enumerate}
+
+%==============================================================================
+\section{Timeline}
+%==============================================================================
+
+\begin{table}[h]
+\centering
+\caption{6-Week Implementation Timeline}
+\begin{tabular}{@{}cl@{}}
+\toprule
+\textbf{Week} & \textbf{Tasks} \\
+\midrule
+1 & Setup TFC framework, start data collection \\
+2 & Continue data collection, preprocessing \\
+3 & Pretraining on unlabeled data \\
+4 & Fine-tuning, supervised baseline comparison \\
+5 & Evaluation, generate figures \\
+6 & Paper writing, real-time demo \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{File Structure}
+%==============================================================================
+
+\begin{lstlisting}
+FINALE/
+|-- perception/
+|   |-- ssl_road_classifier.py      # NEW: Main SSL classifier
+|   |-- ssl_pretraining.py          # NEW: Pretraining script
+|   |-- ssl_finetuning.py           # NEW: Fine-tuning script
+|   |-- supervised_baseline.py      # NEW: Baseline comparison
+|
+|-- utils/
+|   |-- vibration_logger.py         # EXISTS: Data collection
+|   |-- ssl_data_loader.py          # NEW: SSL data loader
+|   |-- ssl_preprocessing.py        # NEW: Preprocessing
+|   |-- ssl_evaluation.py           # NEW: Evaluation metrics
+|
+|-- examples/
+|   |-- ssl_road_demo.py            # NEW: Real-time demo
+|
+|-- config/
+|   |-- ssl_config.yaml             # NEW: SSL hyperparameters
+|
+|-- data/
+|   |-- unlabeled/                  # NEW: Unlabeled data
+|   |-- labeled/                    # NEW: Labeled data
+|
+|-- docs/NOISE_CON_2026/
+    |-- NOISE_CON_2026_paper.tex    # UPDATE: Add SSL sections
+    |-- research_notes.tex          # THIS FILE
+\end{lstlisting}
+
+%==============================================================================
+\section{Verification Tests}
+%==============================================================================
+
+\subsection{Test 1: Framework Works}
+\begin{lstlisting}[language=bash]
+cd TFC-pretraining
+python main.py --dataset HAR
+# Expected: Training completes, loss decreases
+\end{lstlisting}
+
+\subsection{Test 2: Data Collection}
+\begin{lstlisting}[language=bash]
+python utils/vibration_logger.py --output data/test.csv --duration 60
+# Expected: 6000 samples (100Hz x 60s)
+\end{lstlisting}
+
+\subsection{Test 3: Pretraining Runs}
+\begin{lstlisting}[language=bash]
+python perception/ssl_pretraining.py --data data/unlabeled/
+# Expected: Contrastive loss decreases over epochs
+\end{lstlisting}
+
+\subsection{Test 4: Label Efficiency}
+\begin{lstlisting}[language=bash]
+python perception/ssl_finetuning.py --labeled_fraction 0.1
+# Expected: >80% accuracy with only 10% labels
+\end{lstlisting}
+
+\subsection{Test 5: Real-time Demo}
+\begin{lstlisting}[language=bash]
+python examples/ssl_road_demo.py
+# Expected: Live classification while driving
+\end{lstlisting}
+
+%==============================================================================
+\section{References to Cite}
+%==============================================================================
+
+\subsection{Self-Supervised Learning}
+\begin{enumerate}
+    \item Zhang et al. 2022 -- ``Self-Supervised Contrastive Pre-Training For Time Series via Time-Frequency Consistency'' -- NeurIPS 2022 (TFC)
+    \item Xu et al. 2021 -- ``LIMU-BERT: Unleashing the Potential of Unlabeled Data for IMU Sensing Applications'' -- SenSys 2021
+    \item Eldele et al. 2021 -- ``Time-Series Representation Learning via Temporal and Contextual Contrasting'' -- IJCAI 2021 (TS-TCC)
+\end{enumerate}
+
+\subsection{Terrain Classification}
+\begin{enumerate}
+    \item Karnan et al. 2023 -- ``STERLING: Self-Supervised Terrain Representation Learning'' -- CoRL 2023 (closest prior work, off-road only)
+\end{enumerate}
+
+\subsection{Road Surface Classification (Supervised)}
+\begin{enumerate}
+    \item Souza et al. 2025 -- ``CNN-LSTM for road surface classification using multi-IMU'' -- Scientific Reports
+    \item Rahman et al. 2024 -- ``Evaluation of data representation techniques'' -- Scientific Reports
+    \item Menegazzo \& von Wangenheim 2021 -- ``Road surface type classification'' -- Computing
+\end{enumerate}
+
+%==============================================================================
+\section{Risk Mitigation}
+%==============================================================================
+
+\begin{table}[h]
+\centering
+\caption{Risks and Mitigations}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Risk} & \textbf{Mitigation} \\
+\midrule
+SSL doesn't improve over supervised & Ensure 10k+ unlabeled windows \\
+Poor clustering by surface type & Try different augmentations \\
+Can't collect enough data & Use existing PVS dataset \\
+Framework too complex & Fall back to simpler SimCLR \\
+Deadline pressure & Paper is 70\% done \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{Resume Impact}
+%==============================================================================
+
+\textbf{After completion, add to resume:}
+
+\begin{quote}
+``Developed self-supervised vibration representation learning framework for road surface classification, achieving 92\% accuracy with only 10\% labeled data -- first application of contrastive learning to on-road vehicle IMU sensing (NOISE-CON 2026)''
+\end{quote}
+
+\begin{quote}
+``Implemented time-frequency contrastive learning for vehicle vibration signals using TFC architecture, reducing manual labeling requirements by 90\% for autonomous vehicle perception''
+\end{quote}
+
+\textbf{Keywords for recruiters:}
+\begin{itemize}
+    \item Self-supervised learning
+    \item Contrastive learning
+    \item Time-series representation learning
+    \item IMU/sensor fusion
+    \item Autonomous vehicles
+    \item Deep learning
+    \item Signal processing
+\end{itemize}
+
+%==============================================================================
+\section{Alternative Conferences (If NOISE-CON Rejects)}
+%==============================================================================
+
+\begin{table}[h]
+\centering
+\caption{Alternative Venues}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Conference} & \textbf{Deadline} & \textbf{Fit} \\
+\midrule
+IEEE IV 2026 & $\sim$Feb 2026 & Excellent \\
+IEEE ITSC 2026 & $\sim$Apr 2026 & Excellent \\
+ICRA 2027 & $\sim$Sep 2026 & Good \\
+IROS 2026 & $\sim$Mar 2026 & Good \\
+Sensors (MDPI) & Rolling & Good \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

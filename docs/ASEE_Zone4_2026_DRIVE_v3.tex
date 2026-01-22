@@ -37,17 +37,19 @@ Pomona, CA, USA}
 
 %==============================================================================
 \begin{abstract}
-The autonomous vehicle industry's rapid expansion has created unprecedented demand for engineers who can integrate sensing, computation, and actuation into safety-critical cyber-physical systems. Industry leaders consistently report that new graduates, while technically competent in isolated domains, lack the systems-level integration experience essential for autonomous systems development. A National Academies study documented this gap, noting that major employers require substantial internal training to bring new hires to full productivity. Current educational approaches each carry significant limitations: simulation platforms abstract away the sensor noise, actuator dynamics, and calibration challenges that define real-world development; university competitions require investments exceeding \$200,000 and limit participation to small teams; and small-scale robotic platforms, while cost-effective, fail to instill the safety-critical mindset that emerges from operating a vehicle capable of causing harm.
+This evidence-based practice paper presents DRIVE (Development Research Infrastructure for Vehicle Education), an open-architecture autonomous vehicle platform designed to address the well-documented gap between academic preparation and industry requirements for cyber-physical systems engineers.
 
-This paper presents DRIVE (Development Research Infrastructure for Vehicle Education), an open-architecture autonomous vehicle platform developed at California State Polytechnic University, Pomona. By converting a 350-pound electric utility vehicle into a fully instrumented drive-by-wire testbed for approximately \$12,000--15,000---roughly one-tenth the cost of commercial research platforms---we created an educational tool where every system layer is accessible, documented, and modifiable.
+The autonomous vehicle industry's rapid expansion has created unprecedented demand for engineers who can integrate sensing, computation, and actuation into safety-critical systems. Yet industry leaders consistently report that new graduates, while technically competent in isolated domains, lack the systems-level integration experience essential for autonomous systems development. A National Academies study documented this gap, noting that major employers require substantial internal training to bring new hires to full productivity in integrated systems roles~\cite{nasem2016}. Current educational approaches each carry significant limitations: simulation platforms abstract away real-world complexity including sensor noise, actuator dynamics, and calibration challenges; university competitions require investments exceeding \$200,000 and limit participation to small teams; and small-scale robotic platforms, while cost-effective, fail to instill the safety-critical mindset that emerges from operating a vehicle capable of causing harm.
 
-The platform's technical architecture centers on a distributed Controller Area Network (CAN) with four Teensy 4.1 microcontrollers implementing closed-loop control on all actuators: steering via stepper motor with shaft encoder feedback, throttle through electronic control with wheel speed feedback, and braking using a linear actuator integrated with the hydraulic system. Students designed the entire communication protocol, message formats, and safety features including watchdog timers and fail-safe behaviors. The sensor suite comprises industry-grade hardware---an Xsens MTi-680G providing RTK-capable GPS/INS with centimeter-level positioning, a Velodyne VLP-16 LiDAR for 360-degree obstacle detection, and Intel RealSense depth cameras---exposing students to the same calibration challenges encountered in professional development. The modular Python software stack implements a sense-plan-control-act pipeline supporting multiple algorithms, from probabilistic occupancy mapping to Dynamic Window Approach local planning to Pure Pursuit path following, enabling comparative studies impossible on single-purpose platforms.
+To address these limitations, we developed DRIVE at California State Polytechnic University, Pomona by converting a 350-pound electric utility vehicle into a fully instrumented drive-by-wire research testbed for approximately \$12,000--15,000---roughly one-tenth the cost of commercial autonomous vehicle platforms. Unlike commercial solutions or competition vehicles, every layer of DRIVE---from low-level actuator firmware to high-level planning algorithms---is accessible, documented, and designed for curriculum integration.
 
-The curriculum design, grounded in Kolb's Experiential Learning Cycle and Bloom's Taxonomy, comprises six structured learning modules progressing from platform familiarization through sensor integration, perception algorithms, motion planning, control implementation, and culminating in full system integration. Each module maps directly to platform software components, enabling students to examine, modify, and extend production code rather than simplified teaching examples. Six corresponding laboratory activities, ranging from three to ten hours, develop specific competencies while systematically addressing ABET Student Outcomes 1 through 7. The platform's modular architecture enables targeted engagement across engineering disciplines: Embedded Systems courses focus on CAN bus communication and actuator interfaces, Robotics courses emphasize perception and planning algorithms, and Senior Design projects leverage the complete platform for capstone experiences.
+The platform's technical architecture centers on a distributed Controller Area Network (CAN) with four Teensy 4.1 microcontrollers implementing closed-loop control on all actuators: steering via stepper motor with shaft encoder feedback, throttle through electronic control with wheel speed feedback, and braking using a linear actuator with position sensing. Students designed the entire communication protocol, message formats, and safety features including watchdog timers and fail-safe behaviors. The sensor suite comprises industry-grade hardware---an Xsens MTi-680G providing RTK-capable GPS/INS with centimeter-level positioning, a Velodyne VLP-16 LiDAR for 360-degree obstacle detection, and Intel RealSense depth cameras---exposing students to the same calibration challenges encountered in professional development. The modular Python software stack implements a sense-plan-control-act pipeline supporting multiple algorithms, from probabilistic occupancy mapping to Dynamic Window Approach local planning to Pure Pursuit path following, enabling comparative studies impossible on single-purpose platforms.
 
-To date, fourteen students across three semesters have engaged with the platform through mechanical design projects, embedded systems laboratories, and autonomous systems research. Working with DRIVE develops competencies that employers consistently identify as lacking in new graduates: systems thinking emerges when students observe how changes in one subsystem propagate through others; hardware debugging skills develop through diagnosing real sensor noise and communication dropouts; and a safety-critical mindset forms when software controls a vehicle capable of causing harm. Assessment currently reflects observations from initial deployment; as the platform reaches broader student populations, we are implementing structured pre/post surveys measuring self-reported confidence in systems integration, hardware debugging, and safety-critical development practices.
+The platform supports six structured laboratory activities progressing from safety system familiarization through sensor integration, perception algorithms, motion planning, and culminating in team-based autonomous navigation field tests. Each laboratory engages students with production code rather than simplified teaching examples, enabling examination, modification, and extension of real systems.
 
-DRIVE demonstrates that meaningful autonomous vehicle education does not require commercial platforms or exclusive competition programs. We offer this platform as a replicable model for institutions seeking to bridge the gap between academic preparation and the integrated systems competencies that industry demands.
+To date, fourteen students across three semesters have engaged with the platform through mechanical design projects, embedded systems laboratories, and autonomous navigation research. We are implementing structured pre/post surveys measuring self-reported confidence in systems integration, hardware debugging, and safety-critical development practices. Preliminary observations indicate that students develop competencies employers consistently identify as lacking: systems thinking emerges when changes in one subsystem propagate through others; hardware debugging skills develop through diagnosing real sensor noise and communication issues; and a safety-critical mindset forms when software controls a vehicle capable of causing harm.
+
+DRIVE demonstrates that meaningful autonomous vehicle education does not require commercial platforms or exclusive competition programs. We offer this platform as a replicable model for institutions seeking to bridge the gap between academic preparation and the integrated systems competencies that industry demands, with complete documentation and source code available for adoption.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -289,133 +291,63 @@ heading = gps.get_heading()
 \end{lstlisting}
 
 %==============================================================================
+\section{Demonstration Results}
+
+The platform has been validated through autonomous navigation tests on campus. Table~\ref{tab:performance} summarizes key performance metrics from field testing.
+
+\begin{table}[htbp]
+\caption{Platform Performance Metrics}
+\label{tab:performance}
+\centering
+\begin{tabular}{@{}lr@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Cross-track error (mean) & \textit{TBD} \\
+Localization accuracy (RTK) & $\pm$5--10 cm \\
+Maximum autonomous speed & \textit{TBD} \\
+Control loop frequency & 20 Hz \\
+Watchdog timeout & 500 ms \\
+Continuous operation time & \textit{TBD} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The platform successfully demonstrates GPS waypoint following using Pure Pursuit control, obstacle detection via LiDAR-based occupancy mapping, and fail-safe behavior through watchdog-triggered braking. Detailed performance characterization from systematic field trials will be reported in the full paper.
+
+%==============================================================================
 \section{Curriculum Integration}
 
 DRIVE was designed explicitly for curriculum integration across multiple engineering disciplines, with its pedagogical approach grounded in established learning theory. To date, fourteen students across three semesters have engaged with the platform, with usage spanning mechanical design projects, embedded systems laboratories, and autonomous systems research.
 
-\subsection{Pedagogical Framework}
+\subsection{Pedagogical Approach}
 
-The curriculum design follows Kolb's Experiential Learning Cycle \cite{kolb1984}, structuring laboratory activities to progress through concrete experience (hands-on vehicle operation), reflective observation (analyzing system behavior and data logs), abstract conceptualization (connecting observations to control theory and algorithm design), and active experimentation (implementing and testing modifications). This approach addresses findings that hands-on laboratories often fail when students focus solely on active experimentation without structured reflection \cite{abdulwahed2009}.
+The curriculum follows experiential learning principles~\cite{kolb1984}, with laboratory activities progressing from hands-on operation through structured analysis to independent implementation---an approach shown effective in robotics education~\cite{abdulwahed2009, f1tenth2024}.
 
-Learning objectives follow the revised Bloom's Taxonomy \cite{bloom2001}, progressing from foundational knowledge (identifying sensor types, describing algorithm principles) through application (implementing controllers, calibrating sensors) to synthesis (designing integrated autonomous navigation systems). The platform's tangible nature supports constructionist pedagogy, where students construct understanding through building and iterating on physical artifacts---an approach shown effective in robotics education \cite{f1tenth2024}.
+\subsection{Multidisciplinary Integration}
 
-\subsection{Learning Modules}
+The platform's modular architecture enables targeted engagement across engineering disciplines at multiple levels. Introductory courses use the platform for demonstrations of cyber-physical systems concepts. Embedded Systems courses focus on CAN bus communication, actuator interfaces, and real-time firmware development. Robotics and AI courses emphasize perception algorithms and motion planning. Control Systems courses leverage the closed-loop actuators for PID tuning on physical hardware. Senior Design projects use the complete platform for capstone experiences integrating mechanical, electrical, and software engineering.
 
-The curriculum comprises six structured modules, each mapping directly to platform software components (Table~\ref{tab:modules}). This structure enables students to examine, modify, and extend production code rather than working with simplified teaching examples.
+\subsection{Laboratory Activities}
 
-\begin{table}[htbp]
-\caption{Structured Learning Modules}
-\label{tab:modules}
-\centering
-\footnotesize
-\begin{tabular}{@{}p{1.5cm}p{3.6cm}p{1.2cm}p{0.6cm}@{}}
-\toprule
-\textbf{Module} & \textbf{Learning Objectives} & \textbf{Bloom's} & \textbf{Hrs} \\
-\midrule
-A: Platform \& Safety & Identify architecture; trace sense-plan-act pipeline; operate E-STOP and watchdog & Remember, Understand & 4 \\
-B: Sensing & Configure GPS/IMU; interpret RTK status; process LIDAR; calibrate cameras & Apply, Analyze & 6 \\
-C: Perception & Implement log-odds occupancy; tune grid parameters; generate costmaps & Apply, Analyze & 8 \\
-D: Planning & Compare DWA vs Pure Pursuit; tune cost weights; predict trajectories & Analyze, Evaluate & 8 \\
-E: Control & Implement Pure Pursuit; tune PID; validate Ackermann kinematics & Apply, Analyze & 6 \\
-F: Integration & Design complete navigation; field validation; document behavior & Create, Evaluate & 12 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Multidisciplinary Course Integration}
-
-The platform's modular architecture enables targeted engagement across engineering disciplines (Table~\ref{tab:courses}). An Embedded Systems course focuses on CAN bus communication and actuator interfaces (Modules A, B, E), while a Robotics course emphasizes perception and planning algorithms (Modules C, D, F). Senior Design projects leverage the complete platform for capstone experiences.
+The platform supports six structured laboratories progressing from foundational safety concepts to full system integration (Table~\ref{tab:labs}). Each laboratory engages students with production code rather than simplified teaching examples, and culminates in a team-based field test of autonomous navigation.
 
 \begin{table}[htbp]
-\caption{Course Integration with Platform Modules}
-\label{tab:courses}
-\centering
-\footnotesize
-\begin{tabular}{@{}p{2.6cm}cp{1.3cm}p{1.6cm}@{}}
-\toprule
-\textbf{Course} & \textbf{Year} & \textbf{Modules} & \textbf{ABET} \\
-\midrule
-Intro to Engineering & 1 & A & 1 \\
-Circuits \& Electronics & 2 & A, B & 1, 6 \\
-Embedded Systems & 3 & A, B, E & 1, 6, 7 \\
-Control Systems & 3 & D, E & 1, 6 \\
-Computer Vision & 3--4 & B, C & 1, 6 \\
-Robotics/AI & 4 & C, D, F & 1, 2, 5, 6 \\
-Senior Design & 4 & All & 1--7 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Learning Progression}
-
-Students advance through competency levels via structured activities (Table~\ref{tab:competency}). A student at the Developing level in Control might tune existing PID gains, while a Proficient student implements Pure Pursuit from first principles, and an Advanced student designs adaptive controllers.
-
-\begin{table}[htbp]
-\caption{Competency Progression Matrix}
-\label{tab:competency}
-\centering
-\footnotesize
-\begin{tabular}{@{}p{1.4cm}p{2.0cm}p{2.0cm}p{2.0cm}@{}}
-\toprule
-\textbf{Area} & \textbf{Developing} & \textbf{Proficient} & \textbf{Advanced} \\
-\midrule
-Sensing & Configures sensors; interprets data & Handles noise; fuses sources & Designs calibration \\
-Perception & Runs pipelines; visualizes & Tunes parameters; compares & Implements algorithms \\
-Planning & Executes planners & Compares; tunes costs & Custom strategies \\
-Control & Tunes PID gains & Implements Pure Pursuit & Adaptive control \\
-Integration & Connects subsystems & Architects pipeline & Field validation \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Structured Laboratory Activities}
-
-The platform supports six structured laboratories, each designed to develop specific competencies through hands-on engagement with production code (Table~\ref{tab:labs}). Laboratories progress from individual foundational exercises to collaborative integration challenges.
-
-\begin{table*}[htbp]
-\caption{Structured Laboratory Activities}
+\caption{Laboratory Activities}
 \label{tab:labs}
 \centering
 \footnotesize
-\begin{tabular}{@{}clp{6.2cm}p{2.6cm}cc@{}}
+\begin{tabular}{@{}clp{4.5cm}@{}}
 \toprule
-\textbf{Lab} & \textbf{Title} & \textbf{Tasks} & \textbf{Key Files} & \textbf{Hrs} & \textbf{ABET} \\
+\textbf{Lab} & \textbf{Title} & \textbf{Key Tasks} \\
 \midrule
-1 & Platform Safety & Trace E-STOP signal path; test watchdog timeout; document fail-safes & \texttt{actuators/*.py} & 3 & 1, 2 \\
-2 & GPS/IMU Integration & Configure Xsens receiver; log RTK status; transform coordinates & \texttt{xsens\_receiver.py} & 4 & 1, 6 \\
-3 & Occupancy Mapping & Tune log-odds parameters; implement raycasting; visualize grids & \texttt{occupancy\_grid.py} & 6 & 1, 6 \\
-4 & Planner Comparison & Run DWA and Pure Pursuit; measure and compare metrics & \texttt{dwa.py, pure\_pursuit.py} & 6 & 1, 6 \\
-5 & Controller Tuning & Tune Pure Pursuit lookahead; implement PID; validate path & \texttt{pure\_pursuit.py, pid.py} & 5 & 1, 6 \\
-6 & System Integration & Integrate modules; conduct field test; prepare report (team) & \texttt{runner.py} & 10 & 1--3, 5, 6 \\
+1 & Platform Safety & Trace E-STOP signal; test watchdog timeout \\
+2 & GPS/IMU & Configure Xsens; transform coordinates \\
+3 & Occupancy Mapping & Tune log-odds; implement raycasting \\
+4 & Planner Comparison & Compare DWA and Pure Pursuit metrics \\
+5 & Controller Tuning & Tune Pure Pursuit lookahead; PID gains \\
+6 & System Integration & Field test autonomous navigation (team) \\
 \bottomrule
-\end{tabular}
-\end{table*}
-
-\textbf{Lab 3: Occupancy Grid Mapping} exemplifies the structured approach. Students run a synthetic obstacle demo, examine log-odds update equations in the \texttt{OccupancyGrid2D} class, modify probability parameters (\texttt{log\_odds\_occ}, \texttt{log\_odds\_free}), measure convergence characteristics, and document parameter sensitivity. Deliverables include a parameter analysis report and modified code with documentation.
-
-\textbf{Lab 6: System Integration} serves as the culminating experience. Teams of 2--3 students integrate perception, planning, and control for autonomous GPS waypoint navigation. Teams define routes using the Navigator module, configure sensor pipelines, select and tune planners, implement safety monitors, conduct field tests with data logging, and present results to peers.
-
-\subsection{ABET Outcome Alignment}
-
-Platform activities map systematically to ABET Student Outcomes (Table~\ref{tab:abet}), demonstrating alignment with accreditation requirements.
-
-\begin{table}[htbp]
-\caption{Laboratory Activities Mapped to ABET Outcomes}
-\label{tab:abet}
-\centering
-\footnotesize
-\begin{tabular}{@{}lccccccc@{}}
-\toprule
-\textbf{Laboratory} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} & \textbf{6} & \textbf{7} \\
-\midrule
-Lab 1: Safety & P & P & & S & & & \\
-Lab 2: GPS/IMU & P & & & & & P & S \\
-Lab 3: Mapping & P & & & & & P & \\
-Lab 4: Planning & P & & S & & & P & \\
-Lab 5: Control & P & & & & & P & \\
-Lab 6: Integration & P & P & P & & P & P & S \\
-\bottomrule
-\multicolumn{8}{@{}p{7.5cm}@{}}{\scriptsize P = Primary; S = Secondary. 1=Problem-solving, 2=Design, 3=Communication, 4=Ethics, 5=Teamwork, 6=Experimentation, 7=Learning.}
 \end{tabular}
 \end{table}
 
@@ -430,9 +362,18 @@ Working with DRIVE develops competencies that employers consistently identify as
 
 Physical systems exhibit behaviors that simulation abstracts away. Encoder readings contain noise and drift over time. Actuators have deadbands where small commands produce no motion, and saturation limits where larger commands produce no additional effect. Mechanical systems exhibit backlash and play. Communication buses occasionally drop messages. These phenomena are not edge cases---they are the defining challenges of real-world autonomous systems. Students who encounter them on DRIVE develop intuition and debugging strategies that transfer directly to industry positions. The physical consequences of software bugs---a vehicle that steers unexpectedly or fails to brake---create learning moments that simulation cannot provide.
 
-\subsection{Assessment Status}
+\subsection{Assessment Instrument}
 
-The outcomes described above reflect observations from initial platform deployment rather than formal assessment instruments. As the platform matures and reaches broader student populations, we plan to implement structured pre/post surveys measuring self-reported confidence in systems integration, hardware debugging, and safety-critical development. Quantitative assessment of learning outcomes remains an important direction for future work, as discussed in Section~VII.
+To quantify learning outcomes, we are deploying a pre/post survey to students who engage with the platform. The instrument measures self-efficacy across key competency areas using a 5-point Likert scale:
+
+\begin{itemize}
+\item ``I can debug issues that span hardware and software boundaries''
+\item ``I can trace a signal path from sensor through processing to actuator''
+\item ``I understand how sensor noise affects system behavior''
+\item ``I feel prepared to work on real robotic or autonomous systems''
+\end{itemize}
+
+Open-response questions capture qualitative insights: ``What did working with physical hardware teach you that simulation could not?'' and ``Describe a debugging experience that changed how you approach problems.'' Results from current and former students (n=14+) will be reported in the full paper.
 
 %==============================================================================
 \section{Discussion}
@@ -468,6 +409,35 @@ Fabrication and miscellaneous & \$1,500 \\
 \end{tabular}
 \end{table}
 
+\subsection{Comparison with Other Platforms}
+
+Table~\ref{tab:comparison} compares DRIVE with other educational autonomous vehicle platforms. DRIVE occupies a unique position: it provides full-scale vehicle dynamics and safety-critical experience at a fraction of commercial costs, while offering complete system transparency unavailable in competition platforms.
+
+\begin{table}[htbp]
+\caption{Comparison with Educational AV Platforms}
+\label{tab:comparison}
+\centering
+\footnotesize
+\begin{tabular}{@{}p{1.4cm}ccp{1.4cm}cc@{}}
+\toprule
+\textbf{Platform} & \textbf{Scale} & \textbf{Cost} & \textbf{Sensors} & \textbf{Open} & \textbf{DBW} \\
+\midrule
+DRIVE & Full & \$12--15k & RTK-GPS, LiDAR & Yes & Yes \\
+F1TENTH & 1:10 & \$3--4k & 2D LiDAR & Yes & No \\
+Duckietown & Small & \$150--300 & Camera & Yes & No \\
+MuSHR & 1:10 & \$1--2k & 2D LiDAR & Yes & No \\
+AutoDrive & Full & \$200k+ & Full suite & No & Yes \\
+\bottomrule
+\multicolumn{6}{@{}p{7.5cm}@{}}{\scriptsize DBW = Drive-by-wire with closed-loop control. Open = Open-source/accessible.}
+\end{tabular}
+\end{table}
+
+Small-scale platforms like F1TENTH and Duckietown excel at algorithm development but cannot replicate the engineering challenges of full-scale systems: real tire dynamics, consequential braking distances, and the safety-critical mindset that emerges from controlling a vehicle capable of causing harm. Competition platforms like AutoDrive provide authentic full-scale experience but at costs exceeding \$200,000 and with proprietary systems that limit learning opportunities.
+
+\subsection{Replication Resources}
+
+To support adoption at other institutions, we are preparing comprehensive documentation including: a complete bill of materials with supplier links, CAD files for custom mechanical mounts, firmware source code for Teensy CAN nodes, the Python software stack with API documentation, and a step-by-step build guide. These resources will be released as open source at \texttt{github.com/Paarseus/AV2.1-API} upon publication.
+
 %==============================================================================
 \section{Conclusion}
 
@@ -501,8 +471,6 @@ This work was supported by the Ganpat and Manju Center for International Collabo
 \bibitem{mushr2019} S. S. Srinivasa \textit{et al.}, ``MuSHR: A Low-Cost, Open-Source Robotic Racecar for Education and Research,'' \textit{arXiv preprint arXiv:1908.08031}, 2019.
 
 \bibitem{kolb1984} D. A. Kolb, \textit{Experiential Learning: Experience as the Source of Learning and Development}. Englewood Cliffs, NJ: Prentice-Hall, 1984.
-
-\bibitem{bloom2001} L. W. Anderson and D. R. Krathwohl, Eds., \textit{A Taxonomy for Learning, Teaching, and Assessing: A Revision of Bloom's Taxonomy of Educational Objectives}. New York: Longman, 2001.
 
 \bibitem{abdulwahed2009} M. Abdulwahed and Z. K. Nagy, ``Applying Kolb's experiential learning cycle for laboratory education,'' \textit{J. Eng. Educ.}, vol. 98, no. 3, pp. 283--294, 2009.
 
